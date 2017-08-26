@@ -1,5 +1,5 @@
  // These control the button statuses
-var autoCheck = ['false', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false', 'false'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false];
 var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy'];
 
  // These will allow quick selection of the buildings which consume energy
@@ -329,12 +329,12 @@ function setAutoAssignValue() {
 }
 
 function autoSwitch(varCheck, varNumber, textChange, varName) {
-	if (varCheck == "false") {
-		autoCheck[varNumber] = "true";
+	if (varCheck == false) {
+		autoCheck[varNumber] = true;
 		gamePage.msg('Auto' + textChange + ' is now on');
 		document.getElementById(varName).style.color = 'black';
-	} else if (varCheck == "true") {
-		autoCheck[varNumber] = "false";
+	} else if (varCheck == true) {
+		autoCheck[varNumber] = false;
 		gamePage.msg('Auto' + textChange + ' is now off');
 		document.getElementById(varName).style.color = 'red';
 	}
@@ -382,14 +382,14 @@ function autoObserve() {
 	
 	// Auto praise the sun
 function autoPraise(){
-	if (autoCheck[4] != "false" && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
+	if (autoCheck[4] != false && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
 			gamePage.religion.praise();
 	}
 }
 
 		// Build buildings automatically
 function autoBuild() {		
-if (autoCheck[0] != "false" && gamePage.ui.activeTabId == 'Bonfire') {
+if (autoCheck[0] != false && gamePage.ui.activeTabId == 'Bonfire') {
 	
 	var btn = gamePage.tabs[0].buttons;
 	
@@ -421,7 +421,7 @@ if (autoCheck[0] != "false" && gamePage.ui.activeTabId == 'Bonfire') {
 
 		// Build space stuff automatically
 function autoSpace() {		
-if (autoCheck[0] != "false") {	
+if (autoCheck[0] != false) {	
 	
 	var origTab = gamePage.ui.activeTabId;	
 		
@@ -481,7 +481,7 @@ if (autoCheck[0] != "false") {
 	
 		// Trade automatically
 function autoTrade() {
-	if (autoCheck[3] != "false") {
+	if (autoCheck[3] != false) {
 		var titRes = gamePage.resPool.get('titanium');
 		var unoRes = gamePage.resPool.get('unobtainium');
 		var goldResource = gamePage.resPool.get('gold');
@@ -500,7 +500,7 @@ function autoTrade() {
 
 		// Hunt automatically
 function autoHunt() {
-if (autoCheck[2] != "false") {	
+if (autoCheck[2] != false) {	
 	var catpower = gamePage.resPool.get('manpower');
 		if (catpower.value > (catpower.maxValue - 1)) {
 			gamePage.village.huntAll();
@@ -510,7 +510,7 @@ if (autoCheck[2] != "false") {
 
 		// Craft primary resources automatically
 function autoCraft() {
-if (autoCheck[1] != "false") {
+if (autoCheck[1] != false) {
 for (var i = 0; i < resources.length; i++) {
     var curRes = gamePage.resPool.get(resources[i][0]);
     var resourcePerTick = gamePage.getResourcePerTick(resources[i][0], 0);
@@ -543,7 +543,7 @@ var furDerivatives = ['parchment', 'manuscript', 'compedium', 'blueprint'];
 
 		// Auto Research
 function autoResearch() {	
-if (autoCheck[5] != "false" && gamePage.libraryTab.visible != false) {
+if (autoCheck[5] != false && gamePage.libraryTab.visible != false) {
 	var origTab = gamePage.ui.activeTabId;
 	gamePage.ui.activeTabId = 'Science'; gamePage.render();
 	  
@@ -572,7 +572,7 @@ if (autoCheck[5] != "false" && gamePage.libraryTab.visible != false) {
 
 		// Auto Workshop upgrade , tab 3
 function autoWorkshop() {
-if (autoCheck[6] != "false" && gamePage.workshopTab.visible != false) {
+if (autoCheck[6] != false && gamePage.workshopTab.visible != false) {
 	
 	var origTab = gamePage.ui.activeTabId;
 	gamePage.ui.activeTabId = 'Workshop'; gamePage.render();
@@ -601,7 +601,7 @@ if (autoCheck[6] != "false" && gamePage.workshopTab.visible != false) {
 
 		// Festival automatically
 function autoParty() {
-	if (autoCheck[7] != "false" && gamePage.science.get("drama").researched) {
+	if (autoCheck[7] != false && gamePage.science.get("drama").researched) {
 		var catpower = gamePage.resPool.get('manpower').value;
 		var culture = gamePage.resPool.get('culture').value;
 		var parchment = gamePage.resPool.get('parchment').value;
@@ -619,14 +619,14 @@ function autoParty() {
 
 		// Auto assign new kittens to selected job
 function autoAssign() {
-	if (autoCheck[8] != "false" && gamePage.village.getJob(autoChoice).unlocked) {
+	if (autoCheck[8] != false && gamePage.village.getJob(autoChoice).unlocked) {
 		gamePage.village.assignJob(gamePage.village.getJob(autoChoice));
 	}
 }
 
 		// Control Energy Consumption
 function energyControl() {
-	if (autoCheck[9] != "false") {
+	if (autoCheck[9] != false) {
 		proVar = gamePage.resPool.energyProd; 
 		conVar = gamePage.resPool.energyCons;		
 		
@@ -665,7 +665,7 @@ function energyControl() {
 }
 
 function autoNip() {
-	if (autoCheck[0] != "false") {
+	if (autoCheck[0] != false) {
 		if (gamePage.bld.buildingsData[0].val < 100) {
 			$(".btnContent:contains('Gather')").trigger("click");
 		}
@@ -702,4 +702,3 @@ var runAllAutomation = setInterval(function() {
 	}
 
 }, 200);
-
