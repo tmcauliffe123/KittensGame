@@ -141,7 +141,7 @@ var secondaryResources = [
 			["beam", "scaffold", 50],
             ["steel", "alloy", 75],
 			["steel", "gear", 15],
-			["slab", "concrete", 2500]
+			["slab", "concrate", 2500]
 			];
 
 var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
