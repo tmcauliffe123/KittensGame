@@ -452,25 +452,28 @@ if (autoCheck[0] != false) {
 	}
 	
 		// Build space programs
-	if (programBuild != false) {
-		var spcProg = gamePage.tabs[6].GCPanel.children;
-		for (var i = 0; i < spcProg.length; i++) {
-			if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
-				try { 		
-					
-					if (gamePage.ui.activeTabId != "Space") {
-					gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
+		// For me, this was throwing an exception becasue programBuild was undefined... unsure if this needs FIXME'd.  -Araemo
+	try {
+		if (programBuild != false) {
+			var spcProg = gamePage.tabs[6].GCPanel.children;
+			for (var i = 0; i < spcProg.length; i++) {
+				if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+					try { 		
+						
+						if (gamePage.ui.activeTabId != "Space") {
+						gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
+						}
+						
+						spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
+							if (result) {spcProg[i].update();}
+							});
+					} catch(err) {
+					console.log(err);
 					}
-					
-					spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-						if (result) {spcProg[i].update();}
-						});
-				} catch(err) {
-				console.log(err);
 				}
 			}
 		}
-	}
+	} catch(err) {}
 	
 	      if (origTab != gamePage.ui.activeTabId) {
         gamePage.ui.activeTabId = origTab; gamePage.render();
