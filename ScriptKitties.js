@@ -164,12 +164,14 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<option value="priest">Priest</option>' +
 '<option value="miner">Miner</option>' +
 '<option value="hunter">Hunter</option>' +
+'<option value="geologist">Geologist</option>' +
 '<option value="engineer">Engineer</option>' +
 '</select></br>' +
 
 '<button id="autoCraft" style="color:red" onclick="autoSwitch(autoCheck[1], 1, autoName[1], \'autoCraft\')"> Auto Craft </button>' +
 '<select id="craftFur" size="1" onclick="setFurValue()">' +
-'<option value="1" selected="selected">Parchment</option>' +
+'<option value="0" selected="selected">None</option>' +
+'<option value="1">Parchment</option>' +
 '<option value="2">Manuscript</option>' +
 '<option value="3">Compendium</option>' +
 '<option value="4">Blueprint</option>' +
