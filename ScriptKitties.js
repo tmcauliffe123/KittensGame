@@ -178,7 +178,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '</select></br></br>' +
 
 '<label id="secResLabel"> Secondary Craft % </label>' + 
-'<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="30"></span></br></br>' + 
+'<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="0"></span></br></br>' + 
 
 
 '<button id="autoHunt" style="color:red" onclick="autoSwitch(autoCheck[2], 2, autoName[2], \'autoHunt\')"> Auto Hunt </button></br>' + 
@@ -539,8 +539,11 @@ for (var i = 0; i < secondaryResources.length; i++) {
 		//Craft the fur derivatives
 var furDerivatives = ['parchment', 'manuscript', 'compedium', 'blueprint'];
 	for (var i = 0; i < furDerVal; i++) {
-  		if (gamePage.workshop.getCraft(furDerivatives[i]).unlocked) { 
+		// Skip crafting compendiums if blueprints are selected, unless not enough compendiums
+		if (!(furDerVal == 4 && i == 2 && gamePage.resPool.get('compedium').value > 25)) {
+			if (gamePage.workshop.getCraft(furDerivatives[i]).unlocked) { 
 				gamePage.craftAll(furDerivatives[i]); 
+			}
 		}
 	}
 }	
