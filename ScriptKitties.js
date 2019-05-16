@@ -193,7 +193,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 $("#footerLinks").append(htmlMenuAddition);
 
-var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:-400px; width:200px" class="dialog help">' +
+var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:-400px; width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
 '<a href="#" onclick="$(\'#spaceSelect\').toggle(); $(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; left: 15px;">space</a>' +
 '<a href="#" onclick="$(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
 
