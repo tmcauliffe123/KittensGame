@@ -1,9 +1,11 @@
 # ScriptKitties
 A script to automate playing the addicting <a href="http://bloodrizer.ru/games/kittens/#">Kittens Game</a>
 
+## Note: This is a fork from the script MaPaul1977 originally made with some modifications by araemo, and others by myself.
+
 ## How do I use the script?
 
-If you want to use this, feel free to bookmark:
+If you want to use this, feel free to bookmark (may not work):
 
     javascript:(function(){var d=document,s=d.createElement('script');s.src='https://raw.githubusercontent.com/tsolron/KittensGame/master/ScriptKitties.js';d.body.appendChild(s);})();
 
@@ -33,7 +35,7 @@ Currently this script will automatically do the following:
 
 <b>HUNT:</b> Don't let your catpower go to waste! Automatically send your kittens on hunting expeditions to get your furs, ivory, and unicorns!
 
-<b>TRADE:</b> Automagically trade with Zebras and the Elders! Keep your titanium stores full and never miss a visit from the Elders!
+<b>TRADE:</b> Automagically trade with Zebras, Dragons, and the Elders! Keep your titanium stores full and never miss a visit from the Elders!
 
 <b>PRAISE:</b> Want a praise bonus that will make a difference? Turn on Auto Praise and see your faith based productivity skyrocket by praising the sun every tick!
 
@@ -48,6 +50,12 @@ Currently this script will automatically do the following:
 You can use this script as much or as little as you like, but if you turn on all the options, it will basically run the Kittens Game from reset to reset.
 
 Enjoy!
+
+## Tsolron's notable modifications:
+* Can autocraft resources without also auto-crafting furs to Parchment (or others in that line)
+* If Blueprints are selected, will only craft Compendiums if there are not enough to make Blueprints
+* Will auto-build buildings even if you haven't unlocked some of them
+* Fixed building selection pop-up so all buildings appear on-screen
 
 ## Any special thanks?
 
