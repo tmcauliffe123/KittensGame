@@ -1,7 +1,7 @@
 # ScriptKitties
 A script to automate playing the addicting <a href="http://bloodrizer.ru/games/kittens/#">Kittens Game</a>
 
-## Note: This is a fork from the script MaPaul1977 originally made with some modifications by araemo, and others by myself.
+Note: This is a fork from the script MaPaul1977 originally made with some modifications by araemo, and others by myself.
 
 ## How do I use the script?
 
@@ -25,6 +25,7 @@ Currently this script will automatically do the following:
 7) Upgrade Workshop
 8) Festival
 9) Energy Control
+10) Blackcoin Trading
 
 
 ## What are some interesting details?

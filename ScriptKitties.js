@@ -1,6 +1,26 @@
+/*
+clearInterval(autoTradeZ);
+var autoTradeZ = setInterval(function() {
+  gamePage.diplomacy.tradeAll(gamePage.diplomacy.get("zebras"));
+  gamePage.craftAll("alloy");
+}, 200);
+*/
+
+/*
+Add in an auto-trade-bcoin to buy when below [] and sell when above []
+this.game.calendar.cryptoPrice;
+this.game.calendar.cryptoPriceMax;
+gamePage.diplomacy.sellEcoin();
+gamePage.diplomacy.buyEcoin();
+this.game.msg("There was a huge crypto market correction");
+
+if (#coins > 0 && cryptoPrice > 1099) { sellCrypto(); }
+if (cryptoPrice < 881) { buyCrypto; }
+*/
+
  // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false, false];
+var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin'];
 
  // These will allow quick selection of the buildings which consume energy
 var bldSmelter = gamePage.bld.buildingsData[15];
@@ -148,7 +168,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<a id="scriptOptions" onclick="selectOptions()"> | ScriptKitties </a>' +
 
-'<div id="optionSelect" style="display:none; margin-top:-400px; margin-left:-100px; width:200px" class="dialog help">' +
+'<div id="optionSelect" style="display:none; margin-top:-475px; margin-left:-65px; width:200px" class="dialog help">' +
 '<a href="#" onclick="clearOptionHelpDiv();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
 
 '<button id="killSwitch" onclick="clearInterval(clearScript()); gamePage.msg(deadScript);">Kill Switch</button> </br>' +
@@ -158,12 +178,12 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<button id="autoAssign" style="color:red" onclick="autoSwitch(autoCheck[8], 8, autoName[8], \'autoAssign\')"> Auto Assign </button>' +
 '<select id="autoAssignChoice" size="1" onclick="setAutoAssignValue()">' +
-'<option value="farmer" selected="selected">Farmer</option>' +
 '<option value="woodcutter">Woodcutter</option>' +
+'<option value="farmer" selected="selected">Farmer</option>' +
 '<option value="scholar">Scholar</option>' +
-'<option value="priest">Priest</option>' +
-'<option value="miner">Miner</option>' +
 '<option value="hunter">Hunter</option>' +
+'<option value="miner">Miner</option>' +
+'<option value="priest">Priest</option>' +
 '<option value="geologist">Geologist</option>' +
 '<option value="engineer">Engineer</option>' +
 '</select></br>' +
@@ -187,7 +207,8 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
 '<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
-'<button id="autoParty" style="color:red" onclick="autoSwitch(autoCheck[7], 7, autoName[7], \'autoParty\')"> Auto Party </button></br></br>' +
+'<button id="autoParty" style="color:red" onclick="autoSwitch(autoCheck[7], 7, autoName[7], \'autoParty\')"> Auto Party </button></br>' +
+'<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br></br>' +
 '</div>' +
 '</div>'
 
@@ -609,7 +630,7 @@ function autoParty() {
 		// Auto assign new kittens to selected job
 function autoAssign() {
 	if (autoCheck[8] != false && gamePage.village.getJob(autoChoice).unlocked) {
-		gamePage.village.assignJob(gamePage.village.getJob(autoChoice));
+		gamePage.village.assignJob(gamePage.village.getJob(autoChoice), 1);
 	}
 }
 
@@ -649,6 +670,22 @@ function energyControl() {
 		} else if (bldAccelerator.on > 0 && proVar < conVar) {
 			bldAccelerator.on--;
 			conVar--;
+		}
+	}
+}
+
+		// Auto buys and sells bcoins optimally (not yet tested)
+function autoBCoin() {
+	if (autoCheck[10] != false && gamePage.science.get("antimatter").researched) {
+		// When the price is > 1100 it loses 20-30% of its value
+		// 880+ε is the highest it could be after an implosion
+		if (gamePage.calendar.cryptoPrice < 881) {
+			gamePage.diplomacy.buyEcoin();
+			this.game.msg("Bought blackcoins");
+		}
+		if (gamePage.resPool.get('blackcoin').value > 0 && gamePage.calendar.cryptoPrice > (gamePage.calendar.cryptoPriceMax - 1)) {
+			gamePage.diplomacy.sellEcoin();
+			this.game.msg("Sold blackcoins");
 		}
 	}
 }
