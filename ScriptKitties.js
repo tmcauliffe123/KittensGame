@@ -449,7 +449,7 @@ function autoSpace() {
                 var spBuild = gamePage.tabs[6].planetPanels[buildings[z][2]].children;
                 try {
                     for (i = 0 ;i < spBuild.length; i++) {
-                        if (spBuild[i].model.metadata.name == buildingsList[z]) {
+                        if (spBuild[i].model.metadata.name == buildingsList[z] && spBuild[i].model.enabled) {
                             if (gamePage.ui.activeTabId != "Space") {
                                 gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
                             }
@@ -502,6 +502,9 @@ function autoTrade() {
             if (unoRes.value > 5000  && gamePage.diplomacy.get('leviathans').unlocked && gamePage.diplomacy.get('leviathans').duration != 0) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
             } else if (titRes.value < (titRes.maxValue * 0.9) && gamePage.diplomacy.get('zebras').unlocked) {
+                // don't waste the iron, make some space for it.
+                ironRes = gamePage.resPool.get('iron');
+                if (ironRes.value > ironRes.maxValue * 0.9) gamePage.craft('plate', ironRes.value * 0.1 / 125);
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("zebras"), (goldOneTwenty / 15));
             } else if (gamePage.diplomacy.get('dragons').unlocked) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("dragons"), (goldOneTwenty / 15));
