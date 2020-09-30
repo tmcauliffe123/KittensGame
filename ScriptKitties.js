@@ -199,7 +199,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '</select></br></br>' +
 
 '<label id="secResLabel"> Secondary Craft % </label>' +
-'<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="0"></span></br></br>' +
+'<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="' + secResRatio + '"></span></br></br>' +
 
 
 '<button id="autoHunt" style="color:red" onclick="autoSwitch(autoCheck[2], 2, autoName[2], \'autoHunt\')"> Auto Hunt </button></br>' +
@@ -248,7 +248,7 @@ var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-to
 '	<input type="checkbox" id="magnetoBld" class="convertCheck" onchange="verifyBuildingSelected(\'18\', \'magnetoBld\')"><label for="magnetoBld">Magneto</label><br><br>' +
 
 '	<input type="checkbox" id="scienceChecker"><label for="scienceChecker" onclick="$(\'.scienceCheck\').click();"><b>Science</b></label><br>' +
-'	<input type="checkbox" id="libraryBld" class="scienceCheck" onchange="verifyBuildingSelected(\'19\', \'libraryBld\')"><label for="libraryBld">Library</label><br>' +
+'	<input type="checkbox" id="libraryBld" class="scienceCheck" onchange="verifyBuildingSelected(\'19\', \'libraryBld\')"><label for="libraryBld">Library/Data Center</label><br>' +
 '	<input type="checkbox" id="academyBld" class="scienceCheck" onchange="verifyBuildingSelected(\'20\', \'academyBld\')"><label for="academyBld">Academy</label><br>' +
 '	<input type="checkbox" id="obervatoryBld" class="scienceCheck" onchange="verifyBuildingSelected(\'21\', \'obervatoryBld\')"><label for="obervatoryBld">Observatory</label><br><br>' +
 
@@ -379,10 +379,10 @@ function clearScript() {
 
 // Show current kitten efficiency in the in-game log
 function kittenEfficiency() {
-    var timePlayed = gamePage.stats.statsCurrent[3].calculate(game);
+    var secondsPlayed = game.calendar.trueYear() * game.calendar.seasonsPerYear * game.calendar.daysPerSeason * game.calendar.ticksPerDay / game.ticksPerSecond;
     var numberKittens = gamePage.resPool.get('kittens').value;
-    var curEfficiency = (numberKittens - 70) / timePlayed;
-    gamePage.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " kittens per hour.");
+    var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
+    gamePage.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
 }
 
 
@@ -462,7 +462,6 @@ function autoSpace() {
                 } catch(err) {
                     console.log(err);
                 }
-
             }
         }
 
@@ -502,7 +501,7 @@ function autoTrade() {
         if (goldResource.value > (goldResource.maxValue - goldOneTwenty)) {
             if (unoRes.value > 5000  && gamePage.diplomacy.get('leviathans').unlocked && gamePage.diplomacy.get('leviathans').duration != 0) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
-            } else if (titRes.value < (titRes.maxValue * 0.9)  && gamePage.diplomacy.get('zebras').unlocked) {
+            } else if (titRes.value < (titRes.maxValue * 0.9) && gamePage.diplomacy.get('zebras').unlocked) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("zebras"), (goldOneTwenty / 15));
             } else if (gamePage.diplomacy.get('dragons').unlocked) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("dragons"), (goldOneTwenty / 15));
@@ -643,7 +642,7 @@ function autoParty() {
         if (catpower > 1500 && culture > 5000 && parchment > 2500) {
             if (gamePage.prestige.getPerk("carnivals").researched)
                 gamePage.village.holdFestival(1);
-            else if (gamePage.calendar.festivalDays = 0) {
+            else if (gamePage.calendar.festivalDays == 0) {
                 gamePage.village.holdFestival(1);
             }
         }
