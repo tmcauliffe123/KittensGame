@@ -19,8 +19,8 @@ if (cryptoPrice < 881) { buyCrypto; }
 */
 
 // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false];
+var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy'];
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
@@ -169,7 +169,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<a id="scriptOptions" onclick="selectOptions()"> | ScriptKitties </a>' +
 
-'<div id="optionSelect" style="display:none; margin-top:-475px; margin-left:-65px; width:200px" class="dialog help">' +
+'<div id="optionSelect" style="display:none; margin-top:-540px; margin-left:-65px; width:200px" class="dialog help">' +
 '<a href="#" onclick="clearOptionHelpDiv();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
 
 '<button id="killSwitch" onclick="clearInterval(clearScript()); gamePage.msg(deadScript);">Kill Switch</button> </br>' +
@@ -204,6 +204,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<button id="autoHunt" style="color:red" onclick="autoSwitch(autoCheck[2], 2, autoName[2], \'autoHunt\')"> Auto Hunt </button></br>' +
 '<button id="autoTrade" style="color:red" onclick="autoSwitch(autoCheck[3], 3, autoName[3], \'autoTrade\')"> Auto Trade </button></br>' +
+'<button id="autoEmbassy" style="color:red" onclick="autoSwitch(autoCheck[11], 11, autoName[11], \'autoEmbassy\')"> Auto Embassy </button></br>' +
 '<button id="autoPraise" style="color:red" onclick="autoSwitch(autoCheck[4], 4, autoName[4], \'autoPraise\')"> Auto Praise </button></br></br>' +
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
@@ -510,6 +511,30 @@ function autoTrade() {
     }
 }
 
+// Build Embassies automatically
+function autoEmbassy() {
+    if (autoCheck[11] != false) {
+        var culture = gamePage.resPool.get('culture');
+        if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
+            var panels = gamePage.diplomacyTab.racePanels;
+            var btn = panels[0].embassyButton;
+            for (var z = 1; z < panels.length; z++) {
+                var candidate = panels[z].embassyButton;
+                if (candidate && candidate.model.prices[0].val < btn.model.prices[0].val) {
+                    btn = candidate;
+                }
+            }
+            try {
+                btn.controller.buyItem(btn.model, {}, function(result) {
+                    if (result) {btn.update();}
+                });
+            } catch(err) {
+                console.log(err);
+            }
+        }
+    }
+}
+
 // Hunt automatically
 function autoHunt() {
     if (autoCheck[2] != false) {
@@ -720,6 +745,7 @@ var runAllAutomation = setInterval(function() {
         autoWorkshop();
         autoParty();
         autoTrade();
+        autoEmbassy();
     }
 
 }, 200);
