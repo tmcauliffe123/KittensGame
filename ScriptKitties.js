@@ -21,6 +21,7 @@ if (cryptoPrice < 881) { buyCrypto; }
 // These control the button statuses
 var autoCheck = [false, false, false, false, false, false, false, false, false, false, false];
 var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin'];
+var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
 var bldSmelter = gamePage.bld.buildingsData[15];
@@ -465,27 +466,24 @@ function autoSpace() {
         }
 
         // Build space programs
-        // For me, this was throwing an exception becasue programBuild was undefined... unsure if this needs FIXME'd.  -Araemo
-        try {
-            if (programBuild != false) {
-                var spcProg = gamePage.tabs[6].GCPanel.children;
-                for (var i = 0; i < spcProg.length; i++) {
-                    if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
-                        try {
-                            if (gamePage.ui.activeTabId != "Space") {
-                                gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
-                            }
-
-                            spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-                                if (result) {spcProg[i].update();}
-                            });
-                        } catch(err) {
-                            console.log(err);
+        if (programBuild != false) {
+            var spcProg = gamePage.tabs[6].GCPanel.children;
+            for (var i = 0; i < spcProg.length; i++) {
+                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+                    try {
+                        if (gamePage.ui.activeTabId != "Space") {
+                            gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
                         }
+
+                        spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
+                            if (result) {spcProg[i].update();}
+                        });
+                    } catch(err) {
+                        console.log(err);
                     }
                 }
             }
-        } catch(err) {}
+        }
 
         if (origTab != gamePage.ui.activeTabId) {
             gamePage.ui.activeTabId = origTab; gamePage.render();
