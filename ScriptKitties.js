@@ -36,7 +36,7 @@ var proVar = gamePage.resPool.energyProd;
 var conVar = gamePage.resPool.energyCons;
 var tickDownCounter = 1;
 var deadScript = "Script is dead";
-var furDerVal = 0;
+var paperChoice = 0;
 var autoChoice = "farmer";
 var resList = [];
 var secResRatio = 0;
@@ -148,21 +148,25 @@ var buildingsList = [
 ];
 
 var resources = [
-    ["catnip", "wood", 50],
-    ["wood", "beam", 175],
-    ["minerals", "slab", 250],
-    ["coal", "steel", 100],
-    ["iron", "plate", 125],
-    ["oil", "kerosene", 7500],
-    ["uranium", "thorium", 250],
-    ["unobtainium", "eludium", 1000]
+    [    "wood", [["catnip", 50]]],
+    [    "beam", [["wood", 175]]],
+    [    "slab", [["minerals", 250]]],
+    [   "steel", [["iron", 100],["coal", 100]]],
+    [   "plate", [["iron", 125]]], // XXX I worry this will be shadowed by steel
+    [   "alloy", [["titanium", 10],["steel", 75]]],
+    ["kerosene", [["oil", 7500]]],
+    [ "thorium", [["uranium", 250]]],
+    [ "eludium", [["unobtainium", 1000],["alloy", 2500]]],
+    ["scaffold", [["beam", 50]]],
+    ["concrate", [["steel", 25],["slab", 2500]]], // sic concrate
+    [    "gear", [["steel", 15]]], // XXX I worry this will be shadowed by concrete
 ];
 
-var secondaryResources = [
-    ["beam", "scaffold", 50],
-    ["steel", "alloy", 75],
-    ["steel", "gear", 15],
-    ["slab", "concrate", 2500]
+var paperResources = [
+    [ "parchment", [["furs",175]]],
+    ["manuscript", [["parchment", 20],["culture",300]]],
+    [ "compedium", [["manuscript", 50],["science",10000]]], // sic compedium
+    [ "blueprint", [["compedium", 25],["science",25000]]]
 ];
 
 var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
@@ -346,7 +350,7 @@ function selectBuildings() {
 }
 
 function setFurValue() {
-    furDerVal = $('#craftFur').val();
+    paperChoice = $('#craftFur').val();
 }
 
 function setAutoAssignValue() {
@@ -549,35 +553,57 @@ function autoHunt() {
 
 // Craft primary resources automatically
 function autoCraft() {
+    var procPerTick = 3; // we execute every 3 ticks
     if (autoCheck[1] != false) {
-        for (var i = 0; i < resources.length; i++) {
-            var curRes = gamePage.resPool.get(resources[i][0]);
-            var resourcePerTick = gamePage.getResourcePerTick(resources[i][0], 0);
-            var resourcePerCraft = (resourcePerTick * 3);
-            if (curRes.value > (curRes.maxValue - resourcePerCraft) && gamePage.workshop.getCraft(resources[i][1]).unlocked) {
-                gamePage.craft(resources[i][1], (resourcePerCraft / resources[i][2]));
-            }
-        }
+        // Craft primary resources
+        resLoop: for (var i = 0; i < resources.length; i++) {
+            var outRes = gamePage.resPool.get(resources[i][0]);
+            if (! outRes.unlocked) continue;
 
-        // Craft secondary resources automatically if primary craftable is > secondary craftable
-        for (var i = 0; i < secondaryResources.length; i++) {
-            var priRes = gamePage.resPool.get(secondaryResources[i][0]);
-            var secRes = gamePage.resPool.get(secondaryResources[i][1]);
-            var resMath = priRes.value / secondaryResources[i][2];
-
-            if (resMath > 1 && secRes.value < (priRes.value * (secResRatio / 100)) && gamePage.workshop.getCraft(secondaryResources[i][1]).unlocked) {
-                gamePage.craft(secondaryResources[i][1], (resMath * (secResRatio / 100)));
-            }
-        }
-
-        //Craft the fur derivatives
-        var furDerivatives = ['parchment', 'manuscript', 'compedium', 'blueprint'];
-        for (var i = 0; i < furDerVal; i++) {
-            // Skip crafting compendiums if blueprints are selected, unless not enough compendiums
-            if (!(furDerVal == 4 && i == 2 && gamePage.resPool.get('compedium').value > 25)) {
-                if (gamePage.workshop.getCraft(furDerivatives[i]).unlocked) {
-                    gamePage.craftAll(furDerivatives[i]);
+            var craftCount = Infinity
+            var inputs = resources[i][1];
+            for (var j = 0; j < inputs.length; j++) {
+                var inRes = gamePage.resPool.get(inputs[j][0]);
+                if (inRes.maxValue) {
+                    // primary resource
+                    var resourcePerAutoCraft = gamePage.getResourcePerTick(inputs[j][0], 0) * procPerTick;
+                    if (inRes.value < (inRes.maxValue - resourcePerAutoCraft)) continue resLoop;
+                    craftCount = Math.min(craftCount, (resourcePerAutoCraft / inputs[j][1]));
+                } else {
+                    // secondary resource
+                    var resMath = inRes.value / inputs[j][1];
+                    if (resMath <= 1 || outRes.value > (inRes.value * (secResRatio / 100))) continue resLoop;
+                    craftCount = Math.min(craftCount, (resMath * (secResRatio / 100)));
                 }
+            }
+            gamePage.craft(resources[i][0], Math.ceil(craftCount));
+        }
+
+        // Craft the fur derivatives
+        for (var i = 0; i < paperChoice && i < paperResources.length; i++) {
+            if (! gamePage.workshop.getCraft(paperResources[i][0]).unlocked) continue;
+            var output = paperResources[i][0];
+            var inputs = paperResources[i][1];
+            var craftCount = null;
+            for (var j = 0; j < inputs.length; j++) {
+                var curRes = gamePage.resPool.get(inputs[j][0]);
+                if (curRes.maxValue == 0) {
+                    // fur, parchment, manuscript, compendium
+                    craftCount = Math.min((craftCount?craftCount:Infinity), Math.floor(curRes.value / inputs[j][1]));
+                } else {
+                    // science, culture
+                    var resourcePerTick = gamePage.getResourcePerTick(inputs[j][0], 0);
+                    var resourcePerCraft = (resourcePerTick * procPerTick);
+                    craftCount = Math.max((craftCount?craftCount:0), (resourcePerCraft / inputs[j][1]));
+                }
+            }
+            if (craftCount == 0) {
+                continue;
+            } else if (paperResources[paperChoice-1][0] == 'blueprint' && output == 'compedium'
+                    && gamePage.resPool.get('compedium').value > 25) {
+                // save science for making blueprints
+            } else if (curRes.value > (curRes.maxValue - resourcePerCraft)) {
+                gamePage.craft(output, craftCount);
             }
         }
     }
