@@ -453,7 +453,9 @@ function autoSpace() {
                 var spBuild = gamePage.tabs[6].planetPanels[buildings[z][2]].children;
                 try {
                     for (i = 0 ;i < spBuild.length; i++) {
-                        if (spBuild[i].model.metadata.name == buildingsList[z] && spBuild[i].model.enabled) {
+                        if (spBuild[i].model.metadata.name != buildingsList[z]) continue;
+                        if (! spBuild[i].model.enabled) spBuild[i].controller.updateEnabled(spBuild[i].model);
+                        if (spBuild[i].model.enabled) {
                             if (gamePage.ui.activeTabId != "Space") {
                                 gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
                             }
