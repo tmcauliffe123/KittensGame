@@ -671,7 +671,7 @@ function autoParty() {
         var parchment = gamePage.resPool.get('parchment').value;
 
         if (catpower > 1500 && culture > 5000 && parchment > 2500) {
-            if (gamePage.prestige.getPerk("carnivals").researched)
+            if (gamePage.prestige.getPerk("carnivals").researched && gamePage.calendar.festivalDays < 400*10) {
                 gamePage.village.holdFestival(1);
             else if (gamePage.calendar.festivalDays == 0) {
                 gamePage.village.holdFestival(1);
