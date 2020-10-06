@@ -169,15 +169,15 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 $("#footerLinks").append(htmlMenuAddition);
 
 
-var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:0px; top:50%; transform:translateY(-50%); width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
+var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
     '<a href="#" onclick="$(\'#spaceSelect\').toggle(); $(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; left: 15px;">space</a>' +
     '<a href="#" onclick="$(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
     '<br>';
-spaceSelectAddition += buildMenu(buildGroups, buildings);
+bldSelectAddition += buildMenu(buildGroups, buildings);
 bldSelectAddition += '</div>';
 
 
-var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:0px; top:50%; transform:translateY(-50%); width:200px" class="dialog help">' +
+var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); width:200px" class="dialog help">' +
     '<a href="#" onclick="$(\'#spaceSelect\').hide(); $(\'#buildingSelect\').toggle();" style="position: absolute; top: 10px; left: 15px;">cath</a>' +
     '<a href="#" onclick="$(\'#spaceSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
     '	</br></br><input type="checkbox" id="programs" class="programs" onchange="programBuild = this.checked; console.log(this.checked);"><label for="programs">Programs</label></br></br>';
@@ -189,7 +189,7 @@ function buildMenu(groups, elements) {
     for (var i = 0; i < groups.length; i++) {
         var label = groups[i][0];
         var lab = label.substring(0,3); // used for prefixes, "lab" is prefix of "label"
-        menu += `	<input type="checkbox" id="${lab}Checker" onclick="selectChildren(${lab}Checker,${lab}Check);><label for="${lab}Checker"><b>${label}</b></label><br>`;
+        menu += `	<input type="checkbox" id="${lab}Checker" onclick="selectChildren(\'${lab}Checker\',\'${lab}Check\');"><label for="${lab}Checker"><b>${label}</b></label><br>`;
 
         for (var j = 0; j < groups[i][1].length; j++) {
             var bld = groups[i][1][j];
@@ -200,22 +200,29 @@ function buildMenu(groups, elements) {
                     break;
                 }
             }
-            menu += `	<input type="checkbox" id="${bld}" class="${lab}Check" onchange="verifyElementSelected(\'${bld}\', elements)"><label for="${bld}">${bldLabel}</label><br>`;
+            menu += `	<input type="checkbox" id="${bld}" class="${lab}Check" onchange="verifyBuildingSelected(\'${bld}\')"><label for="${bld}"> ${bldLabel}</label><br>`;
         }
         menu += '<br>';
     }
+    return menu;
 }
 
 function selectChildren(checker, checkee) {
-    $(checkee).prop('checked', document.getElementById(checker).checked).change();
+    $('.'+checkee).prop('checked', document.getElementById(checker).checked).change();
 }
 
-function verifyBuildingSelected(id, elements) {
-    var isChecked = document.getElementById(id).checked;
-    for (var i = 0; i < elements.length; i++) {
-        if (elements[i][1] == id) {
-            elements[i][2] = isChecked;
-            break;
+function verifyBuildingSelected(buildingId) {
+    var isChecked = document.getElementById(buildingId).checked;
+    for (var i=0; i<buildings.length; i++) {
+        if (buildings[i][1] == buildingId) {
+            buildings[i][2] = isChecked;
+            return;
+        }
+    }
+    for (var i=0; i<spaceBuildings.length; i++) {
+        if (spaceBuildings[i][1] == buildingId) {
+            spaceBuildings[i][2] = isChecked;
+            return;
         }
     }
 }
@@ -331,7 +338,7 @@ function autoBuild() {
 
 // Build space stuff automatically
 function autoSpace() {
-    if (autoCheck[0] != false && gamePage.tabs[6]) {
+    if (autoCheck[0] != false && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
         var origTab = gamePage.ui.activeTabId;
 
         // Build space buildings
@@ -352,8 +359,9 @@ function autoSpace() {
                                     spBuild.controller.buyItem(spBuild.model, {}, function(result) {
                                         if (result) {spBuild.update();}
                                     });
-                                    console.log(err);
                                 }
+                            } catch(err) {
+                                console.log(err);
                             }
                         }
                     }
@@ -412,7 +420,7 @@ function autoTrade() {
 
 // Build Embassies automatically
 function autoEmbassy() {
-    if (autoCheck[11] != false) {
+    if (autoCheck[11] != false && gamePage.diplomacyTab.racePanels) {
         var culture = gamePage.resPool.get('culture');
         if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
             var panels = gamePage.diplomacyTab.racePanels;
