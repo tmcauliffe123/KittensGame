@@ -398,21 +398,35 @@ function autoSpace() {
 
 // Trade automatically
 function autoTrade() {
+    var ticksPerCycle = 25;
+    // autoTrade happens every 25 ticks
     if (autoCheck[3] != false) {
-        var titRes = gamePage.resPool.get('titanium');
-        var unoRes = gamePage.resPool.get('unobtainium');
         var goldResource = gamePage.resPool.get('gold');
-        var goldOneTwenty = gamePage.getResourcePerTick('gold') * 200;
-        if (goldResource.value > (goldResource.maxValue - goldOneTwenty)) {
+        var gold120 = gamePage.getResourcePerTick('gold') * ticksPerCycle;
+        var powerResource = gamePage.resPool.get('manpower');
+        var power120 = gamePage.getResourcePerTick('manpower') * ticksPerCycle;
+        var sellCount = Math.min(gold120/15, power120/50);
+
+        if (goldResource.value > (goldResource.maxValue - gold120) && powerResource.value > (powerResource.maxValue - power120)) {
+            var titRes = gamePage.resPool.get('titanium');
+            var unoRes = gamePage.resPool.get('unobtainium');
+
             if (unoRes.value > 5000  && gamePage.diplomacy.get('leviathans').unlocked && gamePage.diplomacy.get('leviathans').duration != 0) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
             } else if (titRes.value < (titRes.maxValue * 0.9) && gamePage.diplomacy.get('zebras').unlocked) {
                 // don't waste the iron, make some space for it.
-                ironRes = gamePage.resPool.get('iron');
-                if (ironRes.value > ironRes.maxValue * 0.9) gamePage.craft('plate', ironRes.value * 0.1 / 125);
-                gamePage.diplomacy.tradeAll(game.diplomacy.get("zebras"), (goldOneTwenty / 15));
+                var ironRes = gamePage.resPool.get('iron');
+                var sellIron = game.diplomacy.get("zebras").sells[0];
+                var expectedIron = sellIron.value * sellCount *
+                    (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
+                    (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game))
+                if (ironRes.value > (ironRes.maxValue - expectedIron)) {
+                    gamePage.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125);
+                }
+
+                gamePage.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
             } else if (gamePage.diplomacy.get('dragons').unlocked) {
-                gamePage.diplomacy.tradeAll(game.diplomacy.get("dragons"), (goldOneTwenty / 15));
+                gamePage.diplomacy.tradeMultiple(game.diplomacy.get("dragons"), sellCount);
             }
         }
     }
