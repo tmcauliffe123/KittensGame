@@ -43,123 +43,71 @@ var secResRatio = 0;
 var steamOn = 0;
 
 
-var buildings = [
-    ["Hut", false],
-    ["Log House", false],
-    ["Mansion", false],
-    ["Workshop", false],
-    ["Factory", false],
-    ["Catnip field", false],
-    ["Pasture", false],
-    ["Mine", false],
-    ["Lumber Mill", false],
-    ["Aqueduct", false],
-    ["Oil Well", false],
-    ["Quarry", false],
-    ["Smelter", false],
-    ["Bio Lab", false],
-    ["Calciner", false],
-    ["Reactor", false],
-    ["Accelerator", false],
-    ["Steamworks", false],
-    ["Magneto", false],
-    ["Library", false],
-    ["Academy", false],
-    ["Observatory", false],
-    ["Barn", false],
-    ["Harbour", false],
-    ["Warehouse", false],
-    ["Amphitheatre", false],
-    ["Tradepost", false],
-    ["Chapel", false],
-    ["Temple", false],
-    ["Mint", false],
-    ["Ziggurat", false],
-    ["Unicorn Pasture", false],
-    ["Space Elevator", false, 0],
-    ["Satellite", false, 0],
-    ["Space Station", false, 0],
-    ["Moon Outpost", false, 1],
-    ["Moon Base", false, 1],
-    ["Planet Cracker", false, 2],
-    ["Hydro Fracturer", false, 2],
-    ["Spice Refinery", false, 2],
-    ["Research Vessel", false, 3],
-    ["Orbital Array", false, 3],
-    ["Sunlifter", false, 4],
-    ["Containment Chamber", false, 4],
-    ["Cryostation", false, 5],
-    ["Space Beacon", false, 6],
-    ["Terraforming Station", false, 7],
-    ["Hydroponics", false, 7],
-    ["Tectonic", false, 8]
-];
+var buildings = [/*
+    ["Catnip Field", "field", false],
+    ...
+*/];
+for (var i=0; i<gamePage.bld.buildingsData.length; i++) {
+    var data = gamePage.bld.buildingsData[i];
+    if (! data.stages) var label = data.label;
+    else var label = data.stages.map(function(x){return x.label}).join(' / ');
+    buildings.push([label, data.name, false]);
+}
 
-var buildingsList = [
-    ["hut"],
-    ["logHouse"],
-    ["mansion"],
-    ["workshop"],
-    ["factory"],
-    ["field"],
-    ["pasture"],
-    ["mine"],
-    ["lumberMill"],
-    ["aqueduct"],
-    ["oilWell"],
-    ["quarry"],
-    ["smelter"],
-    ["biolab"],
-    ["calciner"],
-    ["reactor"],
-    ["accelerator"],
-    ["steamworks"],
-    ["magneto"],
-    ["library"],
-    ["academy"],
-    ["observatory"],
-    ["barn"],
-    ["harbor"],
-    ["warehouse"],
-    ["amphitheatre"],
-    ["tradepost"],
-    ["chapel"],
-    ["temple"],
-    ["mint"],
-    ["ziggurat"],
-    ["unicornPasture"],
-    ["spaceElevator"],
-    ["sattelite"],
-    ["spaceStation"],
-    ["moonOutpost"],
-    ["moonBase"],
-    ["planetCracker"],
-    ["hydrofracturer"],
-    ["spiceRefinery"],
-    ["researchVessel"],
-    ["orbitalArray"],
-    ["sunlifter"],
-    ["containmentChamber"],
-    ["cryostation"],
-    ["spaceBeacon"],
-    ["terraformingStation"],
-    ["hydroponics"],
-    ["tectonic"]
+// Group like buildings for menu. Needs to be manual, because it's a judgement call.
+var buildGroups = [
+    ["Kitten Housing", ["hut", "logHouse", "mansion"]],
+    ["Craft Bonuses", ["workshop", "factory"]],
+    ["Production", ["field", "pasture", "mine", "lumberMill", "aqueduct", "oilWell", "quarry"]],
+    ["Conversion", ["smelter", "biolab", "calciner", "reactor", "accelerator", "steamworks", "magneto"]],
+    ["Science", ["library", "academy", "observatory"]],
+    ["Storage", ["barn", "harbor", "warehouse"]],
+    ["Culture", ["amphitheatre", "chapel", "temple"]],
+    ["Other", ["tradepost", "mint", "unicornPasture", /*...*/]],
+    ["Megastructures", ["ziggurat", "chronosphere", "aiCore"]],
 ];
+// Add missing buildings to "Other"
+for (var i=0; i<buildings.length; i++) {
+    if (! buildGroups.map(function(x){return x[1]}).flat().includes(buildings[i][1])) {
+        for (var j=0; j<buildGroups.length; j++) {
+            if (buildGroups[j][0] == "Other") buildGroups[j][1].push(buildings[i][1]);
+        }
+    }
+}
+
+var spaceBuildings = [/*
+    ["Space Elevator", "spaceElevator", false],
+    ...
+*/];
+var spaceGroups = [/*
+    ["cath", ["spaceElevator", "sattelite", "spaceStation"]],
+*/];
+for (var i=0; i<gamePage.space.planets.length; i++) {
+    var planet = gamePage.space.planets[i];
+    var inGroup = [];
+    for (var j=0; j<planet.buildings.length; j++) {
+        var data = planet.buildings[j];
+        if (! data.stages) var label = data.label;
+        else var label = data.stages.map(function(x){return x.label}).join(' / ');
+        spaceBuildings.push([label, data.name, false]);
+        inGroup.push(data.name);
+    }
+    spaceGroups.push([planet.label, inGroup]);
+}
 
 var resources = [
     [    "wood", [["catnip", 50]]],
     [    "beam", [["wood", 175]]],
     [    "slab", [["minerals", 250]]],
     [   "steel", [["iron", 100],["coal", 100]]],
-    [   "plate", [["iron", 125]]], // XXX I worry this will be shadowed by steel
+    [   "plate", [["iron", 125]]],
     [   "alloy", [["titanium", 10],["steel", 75]]],
     ["kerosene", [["oil", 7500]]],
     [ "thorium", [["uranium", 250]]],
     [ "eludium", [["unobtainium", 1000],["alloy", 2500]]],
     ["scaffold", [["beam", 50]]],
     ["concrate", [["steel", 25],["slab", 2500]]], // sic concrate
-    [    "gear", [["steel", 15]]], // XXX I worry this will be shadowed by concrete
+    [    "gear", [["steel", 15]]],
 ];
 
 var paperResources = [
@@ -220,114 +168,56 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 $("#footerLinks").append(htmlMenuAddition);
 
-var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:-400px; width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
-'<a href="#" onclick="$(\'#spaceSelect\').toggle(); $(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; left: 15px;">space</a>' +
-'<a href="#" onclick="$(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
 
-'	<br><input type="checkbox" id="hutChecker"><label for="hutChecker" onclick="$(\'.hutCheck\').click();"><b>Kitten Housing</b></label><br>' +
-'	<input type="checkbox" id="hutBld" class="hutCheck" onchange="verifyBuildingSelected(\'0\', \'hutBld\');"><label for="hutBld">Hut</label><br>' +
-'	<input type="checkbox" id="houseBld" class="hutCheck" onchange="verifyBuildingSelected(\'1\', \'houseBld\')"><label for="houseBld">Log House</label><br>' +
-'	<input type="checkbox" id="mansionBld" class="hutCheck" onchange="verifyBuildingSelected(\'2\', \'mansionBld\')"><label for="mansionBld">Mansion</label><br><br>' +
-
-'	<input type="checkbox" id="craftChecker"><label for="craftChecker" onclick="$(\'.craftCheck\').click();"><b>Craft Bonuses</b></label><br>' +
-'	<input type="checkbox" id="workshopBld" class="craftCheck" onchange="verifyBuildingSelected(\'3\', \'workshopBld\')"><label for="workshopBld">Workshop</label><br>' +
-'	<input type="checkbox" id="factoryBld" class="craftCheck" onchange="verifyBuildingSelected(\'4\', \'factoryBld\')"><label for="factoryBld">Factory</label><br><br>' +
-
-'	<input type="checkbox" id="prodChecker"><label for="prodChecker" onclick="$(\'.prodCheck\').click();"><b>Production</b></label><br>' +
-'	<input type="checkbox" id="fieldBld" class="prodCheck" onchange="verifyBuildingSelected(\'5\', \'fieldBld\')"><label for="fieldBld">Catnip Field</label><br>' +
-'	<input type="checkbox" id="pastureBld" class="prodCheck" onchange="verifyBuildingSelected(\'6\', \'pastureBld\')"><label for="pastureBld">Pasture/Solar</label><br>' +
-'	<input type="checkbox" id="mineBld" class="prodCheck" onchange="verifyBuildingSelected(\'7\', \'mineBld\')"><label for="mineBld">Mine</label><br>' +
-'	<input type="checkbox" id="lumberBld" class="prodCheck" onchange="verifyBuildingSelected(\'8\', \'lumberBld\')"><label for="lumberBld">Lumber Mill</label><br>' +
-'	<input type="checkbox" id="aqueductBld" class="prodCheck" onchange="verifyBuildingSelected(\'9\', \'aqueductBld\')"><label for="aqueductBld">Aqueduct/Hydro</label><br>' +
-'	<input type="checkbox" id="oilBld" class="prodCheck" onchange="verifyBuildingSelected(\'10\', \'oilBld\')"><label for="oilBld">Oil Well</label><br>' +
-'	<input type="checkbox" id="quarryBld" class="prodCheck" onchange="verifyBuildingSelected(\'11\', \'quarryBld\')"><label for="quarryBld">Quarry</label><br><br>' +
-
-'	<input type="checkbox" id="conversionChecker"><label for="conversionChecker" onclick="$(\'.convertCheck\').click();"><b>Conversion</b></label><br>' +
-'	<input type="checkbox" id="smelterBld" class="convertCheck" onchange="verifyBuildingSelected(\'12\', \'smelterBld\')"><label for="smelterBld">Smelter</label><br>' +
-'	<input type="checkbox" id="labBld" class="convertCheck" onchange="verifyBuildingSelected(\'13\', \'labBld\')"><label for="labBld">Bio Lab</label><br>' +
-'	<input type="checkbox" id="calcinerBld" class="convertCheck" onchange="verifyBuildingSelected(\'14\', \'calcinerBld\')"><label for="calcinerBld">Calciner</label><br>' +
-'	<input type="checkbox" id="reactorBld" class="convertCheck" onchange="verifyBuildingSelected(\'15\', \'reactorBld\')"><label for="reactorBld">Reactor</label><br>' +
-'	<input type="checkbox" id="acceleratorBld" class="convertCheck" onchange="verifyBuildingSelected(\'16\', \'acceleratorBld\')"><label for="acceleratorBld">Accelerator</label><br>' +
-'	<input type="checkbox" id="steamBld" class="convertCheck" onchange="verifyBuildingSelected(\'17\', \'steamBld\')"><label for="steamBld">Steamworks</label><br>' +
-'	<input type="checkbox" id="magnetoBld" class="convertCheck" onchange="verifyBuildingSelected(\'18\', \'magnetoBld\')"><label for="magnetoBld">Magneto</label><br><br>' +
-
-'	<input type="checkbox" id="scienceChecker"><label for="scienceChecker" onclick="$(\'.scienceCheck\').click();"><b>Science</b></label><br>' +
-'	<input type="checkbox" id="libraryBld" class="scienceCheck" onchange="verifyBuildingSelected(\'19\', \'libraryBld\')"><label for="libraryBld">Library/Data Center</label><br>' +
-'	<input type="checkbox" id="academyBld" class="scienceCheck" onchange="verifyBuildingSelected(\'20\', \'academyBld\')"><label for="academyBld">Academy</label><br>' +
-'	<input type="checkbox" id="obervatoryBld" class="scienceCheck" onchange="verifyBuildingSelected(\'21\', \'obervatoryBld\')"><label for="obervatoryBld">Observatory</label><br><br>' +
-
-'	<input type="checkbox" id="storageChecker"><label for="storageChecker" onclick="$(\'.storageCheck\').click();"><b>Storage</b></label><br>' +
-'	<input type="checkbox" id="barnBld" class="storageCheck" onchange="verifyBuildingSelected(\'22\', \'barnBld\')"><label for="barnBld">Barn</label><br>' +
-'	<input type="checkbox" id="harborBld" class="storageCheck" onchange="verifyBuildingSelected(\'23\', \'harborBld\')"><label for="harborBld">Harbor</label><br>' +
-'	<input type="checkbox" id="warehouseBld" class="storageCheck" onchange="verifyBuildingSelected(\'24\', \'warehouseBld\')"><label for="warehouseBld">Warehouse</label><br><br>' +
-
-'	<input type="checkbox" id="otherChecker"><label for="otherChecker" onclick="$(\'.otherCheck\').click();"><b>Other</b></label><br>' +
-'	<input type="checkbox" id="ampBld" class="otherCheck" onchange="verifyBuildingSelected(\'25\', \'ampBld\')"><label for="ampBld">Amphitheatre/Broadcast</label><br>' +
-'	<input type="checkbox" id="tradeBld" class="otherCheck" onchange="verifyBuildingSelected(\'26\', \'tradeBld\')"><label for="tradeBld">Tradepost</label><br>' +
-'	<input type="checkbox" id="chapelBld" class="otherCheck" onchange="verifyBuildingSelected(\'27\', \'chapelBld\')"><label for="chapelBld">Chapel</label><br>' +
-'	<input type="checkbox" id="templeBld" class="otherCheck" onchange="verifyBuildingSelected(\'28\', \'templeBld\')"><label for="templeBld">Temple</label><br>' +
-'	<input type="checkbox" id="mintBld" class="otherCheck" onchange="verifyBuildingSelected(\'29\', \'mintBld\')"><label for="mintBld">Mint</label><br>' +
-'	<input type="checkbox" id="zigguratBld" class="otherCheck" onchange="verifyBuildingSelected(\'30\', \'zigguratBld\')"><label for="zigguratBld">Ziggurat</label><br>' +
-'	<input type="checkbox" id="unicBld" class="otherCheck" onchange="verifyBuildingSelected(\'31\', \'unicBld\')"><label for="unicBld">Unicorn Pasture</label><br></br>' +
-
-'</div>'
-
-var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:-400px; width:200px" class="dialog help">' +
-'<a href="#" onclick="$(\'#spaceSelect\').hide(); $(\'#buildingSelect\').toggle();" style="position: absolute; top: 10px; left: 15px;">cath</a>' +
-'<a href="#" onclick="$(\'#spaceSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
-
-'	</br></br><input type="checkbox" id="programs" class="programs" onchange="programBuild = this.checked; console.log(this.checked);"><label for="programs">Programs</label></br></br>' +
-
-'	<input type="checkbox" id="spaceChecker"><label for="spaceChecker" onclick="$(\'.spaceCheck\').click();"><b>Space</b></label></br>' +
-
-'	<input type="checkbox" id="elevSBld" class="spaceCheck" onchange="verifyBuildingSelected(\'32\', \'elevSBld\');"><label for="elevSBld">Space Elevator</label></br>' +
-'	<input type="checkbox" id="satSBld" class="spaceCheck" onchange="verifyBuildingSelected(\'33\', \'satSBld\');"><label for="satSBld">Satellite</label></br>' +
-'	<input type="checkbox" id="statSBld" class="spaceCheck" onchange="verifyBuildingSelected(\'34\', \'statSBld\');"><label for="statSBld">Space Station</label></br></br>' +
-
-'	<input type="checkbox" id="moonChecker"><label for="moonChecker" onclick="$(\'.moonCheck\').click();"><b>Moon</b></label></br>' +
-
-'	<input type="checkbox" id="outSBld" class="moonCheck" onchange="verifyBuildingSelected(\'35\', \'outSBld\');"><label for="outSBld">Lunar Outpost</label></br>' +
-'	<input type="checkbox" id="baseSBld" class="moonCheck" onchange="verifyBuildingSelected(\'36\', \'baseSBld\');"><label for="baseSBld">Moon Base</label></br></br>' +
-
-'	<input type="checkbox" id="duneChecker"><label for="duneChecker" onclick="$(\'.duneCheck\').click();"><b>Dune</b></label></br>' +
+var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:0px; top:50%; transform:translateY(-50%); width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
+    '<a href="#" onclick="$(\'#spaceSelect\').toggle(); $(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; left: 15px;">space</a>' +
+    '<a href="#" onclick="$(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
+    '<br>';
+spaceSelectAddition += buildMenu(buildGroups, buildings);
+bldSelectAddition += '</div>';
 
 
-'	<input type="checkbox" id="crackSBld" class="duneCheck" onchange="verifyBuildingSelected(\'37\', \'crackSBld\');"><label for="crackSBld">Planet Cracker</label></br>' +
-'	<input type="checkbox" id="fracSBld" class="duneCheck" onchange="verifyBuildingSelected(\'38\', \'fracSBld\');"><label for="fracSBld">Hydro Fracturer</label></br>' +
-'	<input type="checkbox" id="spiceSBld" class="duneCheck" onchange="verifyBuildingSelected(\'39\', \'spiceSBld\');"><label for="spiceSBld">Spice Refinery</label></br></br>' +
+var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:0px; top:50%; transform:translateY(-50%); width:200px" class="dialog help">' +
+    '<a href="#" onclick="$(\'#spaceSelect\').hide(); $(\'#buildingSelect\').toggle();" style="position: absolute; top: 10px; left: 15px;">cath</a>' +
+    '<a href="#" onclick="$(\'#spaceSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
+    '	</br></br><input type="checkbox" id="programs" class="programs" onchange="programBuild = this.checked; console.log(this.checked);"><label for="programs">Programs</label></br></br>';
+spaceSelectAddition += buildMenu(spaceGroups, spaceBuildings);
+spaceSelectAddition += '</div>';
 
-'	<input type="checkbox" id="piscineChecker"><label for="piscineChecker" onclick="$(\'piscineCheck\').click();"><b>Piscine</b></label></br>' +
+function buildMenu(groups, elements) {
+    var menu = '';
+    for (var i = 0; i < groups.length; i++) {
+        var label = groups[i][0];
+        var lab = label.substring(0,3); // used for prefixes, "lab" is prefix of "label"
+        menu += `	<input type="checkbox" id="${lab}Checker" onclick="selectChildren(${lab}Checker,${lab}Check);><label for="${lab}Checker"><b>${label}</b></label><br>`;
 
-'	<input type="checkbox" id="reVeSBld" class="piscineCheck" onchange="verifyBuildingSelected(\'40\', \'reVeSBld\');"><label for="reVeSBld">Research Vessel</label></br>' +
-'	<input type="checkbox" id="orbSBld" class="piscineCheck" onchange="verifyBuildingSelected(\'41\', \'orbSBld\');"><label for="orbSBld">Orbital Array</label></br></br>' +
+        for (var j = 0; j < groups[i][1].length; j++) {
+            var bld = groups[i][1][j];
+            for (var k = 0; k < elements.length; k++) {
+                if (bld == elements[k][1]) {
+                    bldLabel = elements[k][0];
+                    bldNum = k;
+                    break;
+                }
+            }
+            menu += `	<input type="checkbox" id="${bld}" class="${lab}Check" onchange="verifyElementSelected(\'${bld}\', elements)"><label for="${bld}">${bldLabel}</label><br>`;
+        }
+        menu += '<br>';
+    }
+}
 
-'	<input type="checkbox" id="heliosChecker"><label for="heliosChecker" onclick="$(\'.heliosCheck\').click();"><b>Helios</b></label></br>' +
+function selectChildren(checker, checkee) {
+    $(checkee).prop('checked', document.getElementById(checker).checked).change();
+}
 
-'	<input type="checkbox" id="sunSBld" class="heliosCheck" onchange="verifyBuildingSelected(\'42\', \'sunSBld\');"><label for="sunSBld">Sunlifter</label></br>' +
-'	<input type="checkbox" id="contSBld" class="heliosCheck" onchange="verifyBuildingSelected(\'43\', \'contSBld\');"><label for="contSBld">Containment Chamber</label></br></br>' +
-
-'	<input type="checkbox" id="terminusChecker"><label for="terminusChecker" onclick="$(\'.terminusCheck\').click();"><b>Terminus</b></label></br>' +
-
-'	<input type="checkbox" id="crySBld" class="terminusCheck" onchange="verifyBuildingSelected(\'44\', \'crySBld\');"><label for="crySBld">Cryostation</label></br></br>' +
-
-'	<input type="checkbox" id="kairoChecker"><label for="kairoChecker" onclick="$(\'.kairoCheck\').click();"><b>Kairo</b></label></br>' +
-
-'	<input type="checkbox" id="beacSBld" class="kairoCheck" onchange="verifyBuildingSelected(\'45\', \'beacSBld\');"><label for="beacSBld">Space Beacon</label></br></br>' +
-
-'	<input type="checkbox" id="yarnChecker"><label for="yarnChecker" onclick="$(\'.yarnCheck\').click();"><b>Yarn</b></label></br>' +
-
-'	<input type="checkbox" id="terrSBld" class="yarnCheck" onchange="verifyBuildingSelected(\'46\', \'terrSBld\');"><label for="terrSBld">Terraforming Station</label></br>' +
-'	<input type="checkbox" id="hydrSBld" class="centaurusCheck" onchange="verifyBuildingSelected(\'47\', \'hydrSBld\');"><label for="hydrSBld">Hydroponics</label></br></br>' +
-
-'	<input type="checkbox" id="centaurusChecker"><label for="centaurusChecker" onclick="$(\'.centaurusCheck\').click();"><b>Centaurus System</b></label></br>' +
-
-'	<input type="checkbox" id="tecSBld" class="centaurusCheck" onchange="verifyBuildingSelected(\'48\', \'tecSBld\');"><label for="tecSBld">Tectonic</label></br></br>' +
-
-'</div>'
-
-function verifyBuildingSelected(buildingNumber, buildingCheckID) {
-    var bldIsChecked = document.getElementById(buildingCheckID).checked;
-    buildings[buildingNumber][1] = bldIsChecked;
+function verifyBuildingSelected(id, elements) {
+    var isChecked = document.getElementById(id).checked;
+    for (var i = 0; i < elements.length; i++) {
+        if (elements[i][1] == id) {
+            elements[i][2] = isChecked;
+            break;
+        }
+    }
 }
 
 $("#game").append(bldSelectAddition);
@@ -406,7 +296,7 @@ function autoObserve() {
 }
 
 // Auto praise the sun
-function autoPraise(){
+function autoPraise() {
     if (autoCheck[4] != false && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
         gamePage.religion.praise();
     }
@@ -417,17 +307,14 @@ function autoBuild() {
     if (autoCheck[0] != false && gamePage.ui.activeTabId == 'Bonfire') {
         var btn = gamePage.tabs[0].buttons;
 
-        //for (var z = 0; z < Math.min(gamePage.tabs[0].buttons.length, 32); z++) {
-        for (var z = 0; z < 32; z++) {
-            if (buildings[z][1] != false) {
-                if (gamePage.bld.getBuildingExt(buildingsList[z]).meta.unlocked) {
-                    for (i = 2 ;i < gamePage.tabs[0].buttons.length; i++) {
+        for (var z = 0; z < buildings.length; z++) {
+            if (buildings[z][2] != false && gamePage.bld.getBuildingExt(buildings[z][1]).meta.unlocked) {
+                for (i = 2; i < gamePage.tabs[0].buttons.length; i++) {
+                    if (btn[i].model.metadata.name == buildings[z][1]) {
                         try {
-                            if (btn[i].model.metadata.name == buildingsList[z]) {
-                                btn[i].controller.buyItem(btn[i].model, {}, function(result) {
-                                    if (result) {btn[i].update();}
-                                });
-                            }
+                            btn[i].controller.buyItem(btn[i].model, {}, function(result) {
+                                if (result) {btn[i].update();}
+                            });
                         } catch(err) {
                             console.log(err);
                         }
@@ -444,38 +331,42 @@ function autoBuild() {
 
 // Build space stuff automatically
 function autoSpace() {
-    if (autoCheck[0] != false) {
+    if (autoCheck[0] != false && gamePage.tabs[6]) {
         var origTab = gamePage.ui.activeTabId;
 
         // Build space buildings
-        for (var z = 32; z < buildings.length; z++) {
-            if (buildings[z][1] != false) {
-                var spBuild = gamePage.tabs[6].planetPanels[buildings[z][2]].children;
-                try {
-                    for (i = 0 ;i < spBuild.length; i++) {
-                        if (spBuild[i].model.metadata.name != buildingsList[z]) continue;
-                        if (! spBuild[i].model.enabled) spBuild[i].controller.updateEnabled(spBuild[i].model);
-                        if (spBuild[i].model.enabled) {
-                            if (gamePage.ui.activeTabId != "Space") {
-                                gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
-                            }
+        for (var z = 0; z < spaceBuildings.length; z++) {
+            if (spaceBuildings[z][2] != false && gamePage.space.getBuilding(spaceBuildings[z][1]).unlocked) {
 
-                            spBuild[i].controller.buyItem(spBuild[i].model, {}, function(result) {
-                                if (result) {spBuild[i].update();}
-                            });
+                for (i = 0; i < gamePage.tabs[6].planetPanels.length; i++) {
+                    for (j = 0; j < gamePage.tabs[6].planetPanels[i].children.length; j++) {
+                        var spBuild = gamePage.tabs[6].planetPanels[i].children[j];
+                        if (spaceBuildings[z][1] == spBuild.id) {
+                            try {
+                                if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
+                                if (spBuild.model.enabled) {
+                                    if (gamePage.ui.activeTabId != "Space") {
+                                        gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
+                                    }
+
+                                    spBuild.controller.buyItem(spBuild.model, {}, function(result) {
+                                        if (result) {spBuild.update();}
+                                    });
+                                    console.log(err);
+                                }
+                            }
                         }
                     }
-                } catch(err) {
-                    console.log(err);
                 }
             }
         }
 
         // Build space programs
-        if (programBuild != false) {
+        if (programBuild != false && gamePage.tabs[6] && gamePage.tabs[6].GCPanel) {
             var spcProg = gamePage.tabs[6].GCPanel.children;
             for (var i = 0; i < spcProg.length; i++) {
-                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+                if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
+                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0 && spcProg[i].model.enabled) {
                     try {
                         if (gamePage.ui.activeTabId != "Space") {
                             gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
@@ -673,7 +564,7 @@ function autoParty() {
         if (catpower > 1500 && culture > 5000 && parchment > 2500) {
             if (gamePage.prestige.getPerk("carnivals").researched && gamePage.calendar.festivalDays < 400*10) {
                 gamePage.village.holdFestival(1);
-            else if (gamePage.calendar.festivalDays == 0) {
+            } else if (gamePage.calendar.festivalDays == 0) {
                 gamePage.village.holdFestival(1);
             }
         }
