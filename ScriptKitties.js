@@ -36,7 +36,7 @@ var proVar = gamePage.resPool.energyProd;
 var conVar = gamePage.resPool.energyCons;
 var tickDownCounter = 1;
 var deadScript = "Script is dead";
-var paperChoice = 0;
+var paperChoice = 'none';
 var autoChoice = "farmer";
 var resList = [];
 var secResRatio = 0;
@@ -141,7 +141,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '</select></br>' +
 
 '<button id="autoCraft" style="color:red" onclick="autoSwitch(autoCheck[1], 1, autoName[1], \'autoCraft\')"> Auto Craft </button>' +
-'<select id="craftFur" size="1" onclick="setFurValue()">' +
+'<select id="craftFur" size="1" onchange="setFurValue()">' +
 '<option value="none" selected="selected">None</option>' +
 '<option value="parchment">Parchment</option>' +
 '<option value="manuscript">Manuscript</option>' +
@@ -406,7 +406,7 @@ function autoTrade() {
         var power120 = gamePage.getResourcePerTick('manpower') * ticksPerCycle;
         var sellCount = Math.floor(Math.min(gold120/15, power120/50));
 
-        if (goldResource.value > (goldResource.maxValue - gold120) && powerResource.value > (powerResource.maxValue - power120)) {
+        if (goldResource.value > (goldResource.maxValue - gold120)) { // don't check catpower
             var titRes = gamePage.resPool.get('titanium');
             var unoRes = gamePage.resPool.get('unobtainium');
 
@@ -471,7 +471,7 @@ function autoCraft() {
 
     if (autoCheck[1] != false) {
         // Craft primary resources
-        resLoop: for (var i = 0; i < resources.length; i++) {
+        for (var i = 0; i < resources.length; i++) {
             var output = resources[i][0];
             var inputs = resources[i][1];
             var outRes = gamePage.resPool.get(resources[i][0]);
@@ -484,12 +484,12 @@ function autoCraft() {
                 if (inRes.maxValue != 0) {
                     // primary resource
                     var resourcePerAutoCraft = gamePage.getResourcePerTick(inputs[j][0], 0) * procPerTick;
-                    if (inRes.value < (inRes.maxValue - resourcePerAutoCraft)) continue resLoop;
+                    if (inRes.value < (inRes.maxValue - resourcePerAutoCraft)) craftCount = 0;
                     craftCount = Math.min(craftCount, (resourcePerAutoCraft / inputs[j][1]));
                 } else if (i < paperStarts) {
                     // secondary resource
                     var resMath = inRes.value / inputs[j][1];
-                    if (resMath <= 1 || outRes.value > (inRes.value * (secResRatio / 100))) continue resLoop;
+                    if (resMath <= 1 || outRes.value > (inRes.value * (secResRatio / 100))) craftCount = 0;
                     craftCount = Math.min(craftCount, (resMath * (secResRatio / 100)));
                 } else {
                     // secondary resource: fur, parchment, manuscript, compendium
@@ -497,14 +497,14 @@ function autoCraft() {
                 }
             }
             if (craftCount == 0 || craftCount == Infinity) {
-                continue;
+                // nothing to do
             } else if (paperChoice == 'blueprint' && output == 'compedium' && gamePage.resPool.get('compedium').value > 25) {
                 // save science for making blueprints
             } else {
                 gamePage.craft(output, Math.ceil(craftCount));
             }
+            if (output == paperChoice) break; // i.e. if manuscript selected, then it's the last one we process
         }
-        if (output == paperChoice) break; // i.e. if manuscript selected, then it's the last one we process
     }
 }
 
