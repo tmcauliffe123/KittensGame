@@ -502,7 +502,6 @@ function autoCraft() {
                 } else {
                     // secondary resource: fur, parchment, manuscript, compendium
                     craftCount = Math.min(craftCount, (inRes.value / inputs[j][1]));
-                    console.log(output+": "+craftCount);
                 }
             }
             if (craftCount == 0 || craftCount == Infinity) {
