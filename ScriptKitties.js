@@ -19,8 +19,8 @@ if (cryptoPrice < 881) { buyCrypto; }
 */
 
 // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false];
+var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle'];
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
@@ -37,6 +37,7 @@ var conVar = gamePage.resPool.energyCons;
 var deadScript = "Script is dead";
 var paperChoice = 'none';
 var autoChoice = "farmer";
+var cycleChoice = 0;
 var secResRatio = 0;
 var steamOn = 0;
 
@@ -155,12 +156,25 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<button id="autoHunt" style="color:red" onclick="autoSwitch(autoCheck[2], 2, autoName[2], \'autoHunt\')"> Auto Hunt </button></br>' +
 '<button id="autoTrade" style="color:red" onclick="autoSwitch(autoCheck[3], 3, autoName[3], \'autoTrade\')"> Auto Trade </button></br>' +
+'<button id="autoPraise" style="color:red" onclick="autoSwitch(autoCheck[4], 4, autoName[4], \'autoPraise\')"> Auto Praise </button></br>' +
+'<button id="autoParty" style="color:red" onclick="autoSwitch(autoCheck[7], 7, autoName[7], \'autoParty\')"> Auto Party </button></br>' +
+'<br>' +
+
 '<button id="autoEmbassy" style="color:red" onclick="autoSwitch(autoCheck[11], 11, autoName[11], \'autoEmbassy\')"> Auto Embassy </button></br>' +
-'<button id="autoPraise" style="color:red" onclick="autoSwitch(autoCheck[4], 4, autoName[4], \'autoPraise\')"> Auto Praise </button></br></br>' +
+'<button id="autoCycle" style="color:red" onclick="autoSwitch(autoCheck[12], 12, autoName[12], \'autoCycle\')"> Auto Cycle </button></br>' +
+'<select id="cycleChoice" size="1" onchange="setCycleChoice()">';
+for (var i = 0; i < game.calendar.cycles.length; i++) {
+    var cycle = game.calendar.cycles[i];
+    var sel = i==0 ? ' selected="selected"' : '';
+    var label = `${cycle.glyph} ${cycle.title}`;
+    htmlMenuAddition += `<option value="${i}"${sel}>${label}</option>`;
+}
+htmlMenuAddition += '</select></br>' +
+'</br>' +
+
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
 '<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
-'<button id="autoParty" style="color:red" onclick="autoSwitch(autoCheck[7], 7, autoName[7], \'autoParty\')"> Auto Party </button></br>' +
 '<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br></br>' +
 '</div>' +
 '</div>'
@@ -245,6 +259,10 @@ function setFurValue() {
 
 function setAutoAssignValue() {
     autoChoice = $('#autoAssignChoice').val();
+}
+
+function setCycleChoice() {
+    cycleChoice = parseInt($('#cycleChoice').val());
 }
 
 function autoSwitch(varCheck, varNumber, textChange, varName) {
@@ -592,6 +610,29 @@ function autoAssign() {
     }
 }
 
+// Try to manupulate time to force the cycle of our choosing
+function autoCycle() {
+    console.log("autoCycle()");
+    if (autoCheck[12] != false && game.calendar.cycle != cycleChoice) {
+        // desired cycle: cycleChoice
+        // current cycle: game.calendar.cycle
+        // year in cycle: game.calendar.cycleYear
+        var dc = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+        var dt = dc*5 - game.calendar.cycleYear;
+        var tcs = gamePage.resPool.get('timeCrystal').value;
+
+        // find and click the button
+        if (dt != 0 && dt < tcs) {
+            for (var i = 0; i < gamePage.timeTab.children.length; i++) {
+                if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
+                    var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
+                    btn.controller.doShatterAmt(btn.model, dt)
+                }
+            }
+        }
+    }
+}
+
 // Control Energy Consumption
 function energyControl() {
     if (autoCheck[9] != false) {
@@ -681,6 +722,10 @@ var runAllAutomation = setInterval(function() {
         autoParty();
         autoTrade();
         autoEmbassy();
+    }
+
+    if (gamePage.timer.ticksTotal % 180 === 0) {
+        autoCycle();
     }
 
 }, 200);
