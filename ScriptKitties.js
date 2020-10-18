@@ -121,7 +121,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<a id="scriptOptions" onclick="selectOptions()"> | ScriptKitties </a>' +
 
-'<div id="optionSelect" style="display:none; margin-top:-540px; margin-left:-65px; width:200px" class="dialog help">' +
+'<div id="optionSelect" style="display:none; margin-top:-125%; margin-left:-65px; width:200px" class="dialog help">' +
 '<a href="#" onclick="clearOptionHelpDiv();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
 
 '<button id="killSwitch" onclick="clearInterval(clearScript()); gamePage.msg(deadScript);">Kill Switch</button> </br>' +
@@ -148,8 +148,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<option value="manuscript">Manuscript</option>' +
 '<option value="compedium">Compendium</option>' +
 '<option value="blueprint">Blueprint</option>' +
-'</select></br></br>' +
-
+'</select></br>' +
 '<label id="secResLabel"> Secondary Craft % </label>' +
 '<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="' + secResRatio + '"></span></br></br>' +
 
@@ -165,7 +164,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<select id="cycleChoice" size="1" onchange="setCycleChoice()">';
 for (var i = 0; i < game.calendar.cycles.length; i++) {
     var cycle = game.calendar.cycles[i];
-    var sel = i==0 ? ' selected="selected"' : '';
+    var sel = (i==0) ? ' selected="selected"' : '';
     var label = `${cycle.glyph} ${cycle.title}`;
     htmlMenuAddition += `<option value="${i}"${sel}>${label}</option>`;
 }
@@ -175,10 +174,9 @@ htmlMenuAddition += '</select></br>' +
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
 '<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
-'<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br></br>' +
+'<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br>' +
 '</div>' +
 '</div>'
-
 $("#footerLinks").append(htmlMenuAddition);
 
 
@@ -411,6 +409,7 @@ function autoTrade() {
         var goldPerCycle = gamePage.getResourcePerTick('gold') * ticksPerCycle;
         var powerResource = gamePage.resPool.get('manpower');
         var powerPerCycle = gamePage.getResourcePerTick('manpower') * ticksPerCycle;
+        var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
         var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
 
         if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
@@ -440,11 +439,10 @@ function autoTrade() {
 
 // Build Embassies automatically
 function autoEmbassy() {
-    if (autoCheck[11] != false && gamePage.diplomacyTab.racePanels) {
+    if (autoCheck[11] != false && gamePage.diplomacyTab.racePanels && gamePage.diplomacyTab.racePanels[0]) {
         var culture = gamePage.resPool.get('culture');
         if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
             var panels = gamePage.diplomacyTab.racePanels;
-            // XXX we need to test background functionality
             var btn = panels[0].embassyButton;
             for (var z = 1; z < panels.length; z++) {
                 var candidate = panels[z].embassyButton;
@@ -612,21 +610,20 @@ function autoAssign() {
 
 // Try to manupulate time to force the cycle of our choosing
 function autoCycle() {
-    console.log("autoCycle()");
     if (autoCheck[12] != false && game.calendar.cycle != cycleChoice) {
         // desired cycle: cycleChoice
         // current cycle: game.calendar.cycle
         // year in cycle: game.calendar.cycleYear
-        var dc = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
-        var dt = dc*5 - game.calendar.cycleYear;
-        var tcs = gamePage.resPool.get('timeCrystal').value;
+        var deltaCycle = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+        var deltaYears = deltaCycle*5 - game.calendar.cycleYear;
+        var timeCrystals = gamePage.resPool.get('timeCrystal').value;
 
         // find and click the button
-        if (dt != 0 && dt < tcs) {
+        if (timeCrystals != 0 && deltaYears != 0 && deltaYears <= timeCrystals) {
             for (var i = 0; i < gamePage.timeTab.children.length; i++) {
                 if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
                     var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
-                    btn.controller.doShatterAmt(btn.model, dt)
+                    btn.controller.doShatterAmt(btn.model, deltaYears)
                 }
             }
         }
@@ -724,8 +721,7 @@ var runAllAutomation = setInterval(function() {
         autoEmbassy();
     }
 
-    if (gamePage.timer.ticksTotal % 180 === 0) {
+    if (gamePage.timer.ticksTotal % 300 === 2) { // not ===  0 to avoid running at the same time as above
         autoCycle();
     }
-
 }, 200);
