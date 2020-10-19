@@ -19,8 +19,8 @@ if (cryptoPrice < 881) { buyCrypto; }
 */
 
 // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle', 'religion'];
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
@@ -173,6 +173,7 @@ htmlMenuAddition += '</select></br>' +
 
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
+'<button id="autoReligion" style="color:red" onclick="autoSwitch(autoCheck[13], 13, autoName[13], \'autoReligion\')"> Auto Religion </button></br>' +
 '<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
 '<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br>' +
 '</div>' +
@@ -535,25 +536,16 @@ function autoCraft() {
 // Auto Research
 function autoResearch() {
     if (autoCheck[5] != false && gamePage.libraryTab.visible != false) {
-        var origTab = gamePage.ui.activeTabId;
-        gamePage.ui.activeTabId = 'Science'; gamePage.render();
-
-        var btn = gamePage.tabs[2].buttons;
-
-        for (var i = 0; i < btn.length; i++) {
-            if (btn[i].model.metadata.unlocked && btn[i].model.metadata.researched != true) {
-                try {
-                    btn[i].controller.buyItem(btn[i].model, {}, function(result) {
-                        if (result) {btn[i].update();}
+        var buttons = gamePage.libraryTab.buttons;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].model.metadata.unlocked && buttons[i].model.metadata.researched != true) {
+                if ( ! buttons[i].model.enabled) buttons[i].update();
+                if (buttons[i].model.enabled) {
+                    buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
+                        if (result) {buttons[i].update();}
                     });
-                } catch(err) {
-                    console.log(err);
                 }
             }
-        }
-
-        if (origTab != gamePage.ui.activeTabId) {
-            gamePage.ui.activeTabId = origTab; gamePage.render();
         }
     }
 }
@@ -561,25 +553,33 @@ function autoResearch() {
 // Auto Workshop upgrade, tab 3
 function autoWorkshop() {
     if (autoCheck[6] != false && gamePage.workshopTab.visible != false) {
-        var origTab = gamePage.ui.activeTabId;
-        gamePage.ui.activeTabId = 'Workshop'; gamePage.render();
-
-        var btn = gamePage.tabs[3].buttons;
-
-        for (var i = 0; i < btn.length; i++) {
-            if (btn[i].model.metadata.unlocked && btn[i].model.metadata.researched != true) {
-                try {
-                    btn[i].controller.buyItem(btn[i].model, {}, function(result) {
-                        if (result) {btn[i].update();}
+        var buttons = gamePage.workshopTab.buttons;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].model.metadata.unlocked && buttons[i].model.metadata.researched != true) {
+                if ( ! buttons[i].model.enabled) buttons[i].update();
+                if (buttons[i].model.enabled) {
+                    buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
+                        if (result) {buttons[i].update();}
                     });
-                } catch(err) {
-                    console.log(err);
                 }
             }
         }
+    }
+}
 
-        if (origTab != gamePage.ui.activeTabId) {
-            gamePage.ui.activeTabId = origTab; gamePage.render();
+// Auto buy relgion upgrades
+function autoReligion() {
+    if (autoCheck[13] != false && gamePage.religionTab.visible != false) {
+        var buttons = gamePage.religionTab.rUpgradeButtons;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].model.visible && buttons[i].model.metadata.researched != true) {
+                if ( ! buttons[i].model.enabled) buttons[i].update();
+                if (buttons[i].model.enabled) {
+                    buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
+                        if (result) {buttons[i].update();}
+                    });
+                }
+            }
         }
     }
 }
@@ -629,6 +629,29 @@ function autoCycle() {
         }
     }
 }
+
+// Try to manupulate time to force the cycle of our choosing
+function autoCycle() {
+    if (autoCheck[12] != false && game.calendar.cycle != cycleChoice) {
+        // desired cycle: cycleChoice
+        // current cycle: game.calendar.cycle
+        // year in cycle: game.calendar.cycleYear
+        var deltaCycle = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+        var deltaYears = deltaCycle*5 - game.calendar.cycleYear;
+        var timeCrystals = gamePage.resPool.get('timeCrystal').value;
+
+        // find and click the button
+        if (timeCrystals != 0 && deltaYears != 0 && deltaYears <= timeCrystals) {
+            for (var i = 0; i < gamePage.timeTab.children.length; i++) {
+                if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
+                    var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
+                    btn.controller.doShatterAmt(btn.model, deltaYears)
+                }
+            }
+        }
+    }
+}
+
 
 // Control Energy Consumption
 function energyControl() {
@@ -716,6 +739,7 @@ var runAllAutomation = setInterval(function() {
     if (gamePage.timer.ticksTotal % 25 === 0) {
         autoResearch();
         autoWorkshop();
+        autoReligion();
         autoParty();
         autoTrade();
         autoEmbassy();
