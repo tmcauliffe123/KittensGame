@@ -19,8 +19,8 @@ if (cryptoPrice < 881) { buyCrypto; }
 */
 
 // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle', 'religion'];
+var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
+var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle', 'religion', 'unicorn'];
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
@@ -174,6 +174,7 @@ htmlMenuAddition += '</select></br>' +
 '<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
 '<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
 '<button id="autoReligion" style="color:red" onclick="autoSwitch(autoCheck[13], 13, autoName[13], \'autoReligion\')"> Auto Religion </button></br>' +
+'<button id="autoUnicorn" style="color:red" onclick="autoSwitch(autoCheck[14], 14, autoName[14], \'autoUnicorn\')"> Auto Unicorn </button></br>' +
 '<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
 '<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br>' +
 '</div>' +
@@ -584,6 +585,58 @@ function autoReligion() {
     }
 }
 
+// Auto buy unicorn upgrades
+function autoUnicorn() {
+    if (autoCheck[14] != false && gamePage.religionTab.visible != false) {
+        /* About Unicorn Rifts
+         * Each Tower causes a 0.05% chance for a rift per game-day
+         * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
+         */
+        var riftUnicorns = 500 * (1 + game.getEffect("unicornsRatioReligion") * 0.1);
+        var upsprc = riftUnicorns / (100000/5); // unicorns per second per riftChance
+        var ups = 5 * gamePage.getResourcePerTick('unicorns') / (1 + game.getEffect("unicornsRatioReligion"));
+
+        // find which is the best value
+        var buttons = gamePage.religionTab.zgUpgradeButtons;
+        var bestButton = null;
+        var bestValue = 0.0;
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].model.metadata.unlocked) {
+                var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion
+                var rifts = buttons[i].model.metadata.effects.riftChance || 0
+                var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'})
+                if (tearCost == null) continue;
+                var value = (ratio * ups + rifts * upsprc) / tearCost.val;
+                if (value > bestValue) {
+                    bestButton = buttons[i];
+                    bestValue = value;
+                }
+            }
+        }
+
+        // can we afford it?
+        if (bestButton != null) {
+            var cost = bestButton.model.prices.find(function(element){return element.name==='tears'}).val;
+            var unicorns = gamePage.resPool.get('unicorns').value;
+            var tears = gamePage.resPool.get('tears').value;
+            var zigs = game.bld.get("ziggurat").on
+            var available = tears + Math.floor(unicorns / 2500) * zigs
+            if (available > cost) {
+                if (tears < cost) {
+                    var sacButton = gamePage.religionTab.sacrificeBtn;
+                    // XXX: I don't like calling an internal function like _transform
+                    // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
+                    sacButton.controller._transform(sacButton.model, Math.ceil((cost - tears) / zigs));
+                }
+                if ( ! bestButton.model.enabled) bestButton.update();
+                bestButton.controller.buyItem(bestButton.model, {}, function(result) {
+                    if (result) {bestButton.update();}
+                });
+            }
+        }
+    }
+}
+
 // Festival automatically
 function autoParty() {
     if (autoCheck[7] != false && gamePage.science.get("drama").researched) {
@@ -747,5 +800,7 @@ var runAllAutomation = setInterval(function() {
 
     if (gamePage.timer.ticksTotal % 300 === 2) { // not ===  0 to avoid running at the same time as above
         autoCycle();
+    } else if (gamePage.timer.ticksTotal % 300 === 151) {
+        autoUnicorn();
     }
 }, 200);
