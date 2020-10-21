@@ -38,7 +38,7 @@ var deadScript = "Script is dead";
 var paperChoice = 'none';
 var autoChoice = "farmer";
 var cycleChoice = 0;
-var secResRatio = 0;
+var secResRatio = 25;
 var steamOn = 0;
 
 
@@ -350,8 +350,6 @@ function autoBuild() {
 // Build space stuff automatically
 function autoSpace() {
     if (autoCheck[0] != false && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
-        var origTab = gamePage.ui.activeTabId;
-
         // Build space buildings
         outer: for (var z = 0; z < spaceBuildings.length; z++) {
             if (spaceBuildings[z][2] != false && gamePage.space.getBuilding(spaceBuildings[z][1]).unlocked) {
@@ -378,26 +376,15 @@ function autoSpace() {
         if (programBuild != false && gamePage.tabs[6] && gamePage.tabs[6].GCPanel) {
             var spcProg = gamePage.tabs[6].GCPanel.children;
             for (var i = 0; i < spcProg.length; i++) {
-                if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
-                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0 && spcProg[i].model.enabled) {
-                    try {
-                        // XXX revisit if above turns out well
-                        if (gamePage.ui.activeTabId != "Space") {
-                            gamePage.ui.activeTabId = 'Space'; gamePage.render(); // Change the tab so that we can build
-                        }
-
+                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+                    if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
+                    if (spcProg[i].model.enabled) {
                         spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
                             if (result) {spcProg[i].update();}
                         });
-                    } catch(err) {
-                        console.log(err);
                     }
                 }
             }
-        }
-
-        if (origTab != gamePage.ui.activeTabId) {
-            gamePage.ui.activeTabId = origTab; gamePage.render();
         }
     }
 }
