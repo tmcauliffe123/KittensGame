@@ -90,6 +90,7 @@ Enjoy!
 * "Auto Cycle" won't stop just because the fabric of spacetime is melting due to chronoheat. Build some Furnaces.
 * Try to keep Coal generation less than Iron generation so that Plates get crafted.
 * Early game, the script will make poor choices, because it does what is cheapest.
+* The script won't craft any resource that you haven't "unlocked", which roughly means "is visible on the left panel". You need to craft one of each manually to prime the pump.
 
 ## Any special thanks?
 

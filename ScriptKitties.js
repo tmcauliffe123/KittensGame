@@ -179,7 +179,8 @@ spaceSelectAddition += '</div>';
 
 function autoButton(id, label) {
     element = 'auto' + id[0].toUpperCase() + id.slice(1);
-    button = `<button id="${element}" style="color:red" onclick="autoSwitch('id', '${element}');"> ${label} </button>`;
+    button = `<button id="${element}" style="color:red" onclick="autoSwitch('${id}', '${element}');"> ${label} </button>`;
+    return button;
 }
 
 function buildMenu(groups, elements, elementsName) {
@@ -694,13 +695,14 @@ function autoBCoin() {
     if (auto.bcoin && gamePage.science.get("antimatter").researched) {
         // When the price is > 1100 it loses 20-30% of its value
         // 880+ε is the highest it could be after an implosion
-        if (gamePage.calendar.cryptoPrice < 881) {
-            gamePage.diplomacy.buyEcoin();
-            this.game.msg("Bought blackcoins");
-        }
-        if (gamePage.resPool.get('blackcoin').value > 0 && gamePage.calendar.cryptoPrice > (gamePage.calendar.cryptoPriceMax - 1)) {
-            gamePage.diplomacy.sellEcoin();
-            this.game.msg("Sold blackcoins");
+        //
+        // Prior was buy < 881; sell > 1099
+        // However, we want to keep stuffing BC in until the last minute
+        // Well, the last hour or two.
+        if (gamePage.calendar.cryptoPrice < 1095) {
+            gamePage.diplomacy.buyBcoin();
+        } else if (gamePage.resPool.get('blackcoin').value > 0) {
+            gamePage.diplomacy.sellBcoin();
         }
     }
 }
@@ -714,40 +716,41 @@ function autoNip() {
 }
 
 // This function keeps track of the game's ticks and uses math to execute these functions at set times relative to the game.
+// Offsets are staggered to spread out the load. (Not that there is much).
 clearInterval(runAllAutomation);
 var runAllAutomation = setInterval(function() {
     autoNip();
     autoPraise();
     autoBuild();
 
+    ticks = gamePage.timer.ticksTotal
+
     // every 0.6 seconds
-    if (gamePage.timer.ticksTotal % 3 === 0) {
-        autoObserve();
-        autoCraft();
-        autoHunt();
-        autoAssign();
-        energyControl();
+    switch (ticks % 3) {
+        case 0: autoCraft(); break;
+        case 1: autoObserve(); autoHunt(); autoAssign(); break;
+        case 2: energyControl(); break;
     }
 
     // every 2 seconds == every game-day
-    if (gamePage.timer.ticksTotal % 10 === 0) {
-        autoSpace();
+    switch (ticks % 10) {
+        case 1: autoSpace(); break;
+        case 2: autoParty(); break;
     }
 
     // every 5 seconds
-    if (gamePage.timer.ticksTotal % 25 === 0) {
-        autoResearch();
-        autoWorkshop();
-        autoReligion();
-        autoParty();
-        autoTrade();
-        autoEmbassy();
+    switch (ticks % 25) {
+        case  2: autoResearch(); break;
+        case  7: autoWorkshop(); break;
+        case 12: autoReligion(); break;
+        case 17: autoTrade();    break;
+        case 22: autoEmbassy();  break;
     }
 
     // every minute
-    if (gamePage.timer.ticksTotal % 300 === 2) { // not ===  0 to avoid running at the same time as above
-        autoCycle();
-    } else if (gamePage.timer.ticksTotal % 300 === 151) {
-        autoUnicorn();
+    switch (ticks % 300) {
+        case   1: autoCycle();   break;
+        case 101: autoUnicorn(); break;
+        case 203: autoBCoin();   break;
     }
 }, 200);
