@@ -1,26 +1,6 @@
-/*
-clearInterval(autoTradeZ);
-var autoTradeZ = setInterval(function() {
-  gamePage.diplomacy.tradeAll(gamePage.diplomacy.get("zebras"));
-  gamePage.craftAll("alloy");
-}, 200);
-*/
-
-/*
-Add in an auto-trade-bcoin to buy when below [] and sell when above []
-this.game.calendar.cryptoPrice;
-this.game.calendar.cryptoPriceMax;
-gamePage.diplomacy.sellEcoin();
-gamePage.diplomacy.buyEcoin();
-this.game.msg("There was a huge crypto market correction");
-
-if (#coins > 0 && cryptoPrice > 1099) { sellCrypto(); }
-if (cryptoPrice < 881) { buyCrypto; }
-*/
 
 // These control the button statuses
-var autoCheck = [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false];
-var autoName = ['build', 'craft', 'hunt', 'trade', 'praise', 'science', 'upgrade', 'party', 'assign', 'energy', 'bcoin', 'embassy', 'cycle', 'religion', 'unicorn'];
+var auto = new Object(); // Is a toggle holder. Use like ``auto.craft = true; if (auto.craft) { ...
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
@@ -126,10 +106,10 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 
 '<button id="killSwitch" onclick="clearInterval(clearScript()); gamePage.msg(deadScript);">Kill Switch</button> </br>' +
 '<button id="efficiencyButton" onclick="kittenEfficiency()">Check Efficiency</button></br></br>' +
-'<button id="autoBuild" style="color:red" onclick="autoSwitch(autoCheck[0], 0, autoName[0], \'autoBuild\');"> Auto Build </button></br>' +
+autoButton('build', "Auto Build") + '</br>' +
 '<button id="bldSelect" onclick="selectBuildings()">Select Building</button></br>' +
 
-'<button id="autoAssign" style="color:red" onclick="autoSwitch(autoCheck[8], 8, autoName[8], \'autoAssign\')"> Auto Assign </button>' +
+autoButton('assign', "Auto Assign") +
 '<select id="autoAssignChoice" size="1" onclick="setAutoAssignValue()">' +
 '<option value="woodcutter">Woodcutter</option>' +
 '<option value="farmer" selected="selected">Farmer</option>' +
@@ -141,7 +121,7 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<option value="engineer">Engineer</option>' +
 '</select></br>' +
 
-'<button id="autoCraft" style="color:red" onclick="autoSwitch(autoCheck[1], 1, autoName[1], \'autoCraft\')"> Auto Craft </button>' +
+autoButton('craft', "Auto Craft") +
 '<select id="craftFur" size="1" onchange="setFurValue()">' +
 '<option value="none" selected="selected">None</option>' +
 '<option value="parchment">Parchment</option>' +
@@ -153,30 +133,30 @@ var htmlMenuAddition = '<div id="farRightColumn" class="column">' +
 '<span id="secResSpan" title="Between 0 and 100"><input id="secResText" type="text" style="width:25px" onchange="secResRatio = this.value" value="' + secResRatio + '"></span></br></br>' +
 
 
-'<button id="autoHunt" style="color:red" onclick="autoSwitch(autoCheck[2], 2, autoName[2], \'autoHunt\')"> Auto Hunt </button></br>' +
-'<button id="autoTrade" style="color:red" onclick="autoSwitch(autoCheck[3], 3, autoName[3], \'autoTrade\')"> Auto Trade </button></br>' +
-'<button id="autoPraise" style="color:red" onclick="autoSwitch(autoCheck[4], 4, autoName[4], \'autoPraise\')"> Auto Praise </button></br>' +
-'<button id="autoParty" style="color:red" onclick="autoSwitch(autoCheck[7], 7, autoName[7], \'autoParty\')"> Auto Party </button></br>' +
+autoButton('hunt', "Auto Hunt") + '</br>' +
+autoButton('trade', "Auto Trade") + '</br>' +
+autoButton('praise', "Auto Praise") + '</br>' +
+autoButton('party', "Auto Party") + '</br>' +
 '<br>' +
 
-'<button id="autoEmbassy" style="color:red" onclick="autoSwitch(autoCheck[11], 11, autoName[11], \'autoEmbassy\')"> Auto Embassy </button></br>' +
-'<button id="autoCycle" style="color:red" onclick="autoSwitch(autoCheck[12], 12, autoName[12], \'autoCycle\')"> Auto Cycle </button></br>' +
+autoButton('embassy', "Auto Embassy") + '</br>' +
+autoButton('cycle', "Auto Cycle") + '</br>' +
 '<select id="cycleChoice" size="1" onchange="setCycleChoice()">';
 for (var i = 0; i < game.calendar.cycles.length; i++) {
     var cycle = game.calendar.cycles[i];
-    var sel = (i==0) ? ' selected="selected"' : '';
+    var sel = (i==cycleChoice) ? ' selected="selected"' : '';
     var label = `${cycle.glyph} ${cycle.title}`;
     htmlMenuAddition += `<option value="${i}"${sel}>${label}</option>`;
 }
 htmlMenuAddition += '</select></br>' +
 '</br>' +
 
-'<button id="autoScience" style="color:red" onclick="autoSwitch(autoCheck[5], 5, autoName[5], \'autoScience\')"> Auto Science </button></br>' +
-'<button id="autoUpgrade" style="color:red" onclick="autoSwitch(autoCheck[6], 6, autoName[6], \'autoUpgrade\')"> Auto Upgrade </button></br>' +
-'<button id="autoReligion" style="color:red" onclick="autoSwitch(autoCheck[13], 13, autoName[13], \'autoReligion\')"> Auto Religion </button></br>' +
-'<button id="autoUnicorn" style="color:red" onclick="autoSwitch(autoCheck[14], 14, autoName[14], \'autoUnicorn\')"> Auto Unicorn </button></br>' +
-'<button id="autoEnergy" style="color:red" onclick="autoSwitch(autoCheck[9], 9, autoName[9], \'autoEnergy\')"> Energy Control </button></br>' +
-'<button id="autoBCoin" style="color:red" onclick="autoSwitch(autoCheck[10], 10, autoName[10], \'autoBCoin\')"> Auto BCoin </button></br>' +
+autoButton('research', 'Auto Science') + '</br>' +
+autoButton('workshop', 'Auto Upgrade') + '</br>' +
+autoButton('religion', 'Auto Religion') + '</br>' +
+autoButton('unicorn' , 'Auto Unicorn') + '</br>' +
+autoButton('energy'  , 'Energy Control') + '</br>' +
+autoButton('bcoin'   , 'Auto BCoin') + '</br>' +
 '</div>' +
 '</div>'
 $("#footerLinks").append(htmlMenuAddition);
@@ -196,6 +176,11 @@ var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top
     '	</br></br><input type="checkbox" id="programs" class="programs" onchange="programBuild = this.checked; console.log(this.checked);"><label for="programs">Programs</label></br></br>';
 spaceSelectAddition += buildMenu(spaceGroups, spaceBuildings, 'spaceBuildings');
 spaceSelectAddition += '</div>';
+
+function autoButton(id, label) {
+    element = 'auto' + id[0].toUpperCase() + id.slice(1);
+    button = `<button id="${element}" style="color:red" onclick="autoSwitch('id', '${element}');"> ${label} </button>`;
+}
 
 function buildMenu(groups, elements, elementsName) {
     var menu = '';
@@ -265,16 +250,10 @@ function setCycleChoice() {
     cycleChoice = parseInt($('#cycleChoice').val());
 }
 
-function autoSwitch(varCheck, varNumber, textChange, varName) {
-    if (varCheck == false) {
-        autoCheck[varNumber] = true;
-        gamePage.msg('Auto' + textChange + ' is now on');
-        document.getElementById(varName).style.color = 'black';
-    } else if (varCheck == true) {
-        autoCheck[varNumber] = false;
-        gamePage.msg('Auto' + textChange + ' is now off');
-        document.getElementById(varName).style.color = 'red';
-    }
+function autoSwitch(id, element) {
+    auto[id] = !auto[id];
+    gamePage.msg(`${element} is now  ${(auto[id] ? 'on' : 'off')}`);
+    document.getElementById(element).style.color = auto[id] ? 'black' : 'red';
 }
 
 function clearScript() {
@@ -315,18 +294,18 @@ function autoObserve() {
 
 // Auto praise the sun
 function autoPraise() {
-    if (autoCheck[4] != false && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
+    if (auto.praise && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
         gamePage.religion.praise();
     }
 }
 
 // Build buildings automatically
 function autoBuild() {
-    if (autoCheck[0] != false && gamePage.ui.activeTabId == 'Bonfire') {
+    if (auto.build && gamePage.ui.activeTabId == 'Bonfire') {
         var btn = gamePage.tabs[0].buttons;
 
         for (var z = 0; z < buildings.length; z++) {
-            if (buildings[z][2] != false && gamePage.bld.getBuildingExt(buildings[z][1]).meta.unlocked) {
+            if (buildings[z][2] && gamePage.bld.getBuildingExt(buildings[z][1]).meta.unlocked) {
                 for (i = 2; i < gamePage.tabs[0].buttons.length; i++) {
                     if (btn[i].model.metadata.name == buildings[z][1]) {
                         try {
@@ -349,10 +328,10 @@ function autoBuild() {
 
 // Build space stuff automatically
 function autoSpace() {
-    if (autoCheck[0] != false && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
+    if (auto.space && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
         // Build space buildings
         outer: for (var z = 0; z < spaceBuildings.length; z++) {
-            if (spaceBuildings[z][2] != false && gamePage.space.getBuilding(spaceBuildings[z][1]).unlocked) {
+            if (spaceBuildings[z][2] && gamePage.space.getBuilding(spaceBuildings[z][1]).unlocked) {
 
                 for (i = 0; i < gamePage.tabs[6].planetPanels.length; i++) {
                     for (j = 0; j < gamePage.tabs[6].planetPanels[i].children.length; j++) {
@@ -373,7 +352,7 @@ function autoSpace() {
         }
 
         // Build space programs
-        if (programBuild != false && gamePage.tabs[6] && gamePage.tabs[6].GCPanel) {
+        if (programBuild && gamePage.tabs[6] && gamePage.tabs[6].GCPanel) {
             var spcProg = gamePage.tabs[6].GCPanel.children;
             for (var i = 0; i < spcProg.length; i++) {
                 if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
@@ -393,7 +372,7 @@ function autoSpace() {
 function autoTrade() {
     var ticksPerCycle = 25;
     // autoTrade happens every 25 ticks
-    if (autoCheck[3] != false) {
+    if (auto.trade) {
         var goldResource = gamePage.resPool.get('gold');
         var goldPerCycle = gamePage.getResourcePerTick('gold') * ticksPerCycle;
         var powerResource = gamePage.resPool.get('manpower');
@@ -428,7 +407,7 @@ function autoTrade() {
 
 // Build Embassies automatically
 function autoEmbassy() {
-    if (autoCheck[11] != false && gamePage.diplomacyTab.racePanels && gamePage.diplomacyTab.racePanels[0]) {
+    if (auto.embassy && gamePage.diplomacyTab.racePanels && gamePage.diplomacyTab.racePanels[0]) {
         var culture = gamePage.resPool.get('culture');
         if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
             var panels = gamePage.diplomacyTab.racePanels;
@@ -452,7 +431,7 @@ function autoEmbassy() {
 
 // Hunt automatically
 function autoHunt() {
-    if (autoCheck[2] != false) {
+    if (auto.hunt) {
         var catpower = gamePage.resPool.get('manpower');
         if (catpower.value > (catpower.maxValue - 1)) {
             gamePage.village.huntAll();
@@ -477,12 +456,12 @@ function autoCraft() {
      */
     var ticksPerCycle = 3; // we execute every 3 ticks
 
-    if (autoCheck[1] != false) {
+    if (auto.craft) {
         // Craft primary resources
         for (var i = 0; i < resources.length; i++) {
             var output = resources[i][0];
             var inputs = resources[i][1];
-            var outRes = gamePage.resPool.get(resources[i][0]);
+            var outRes = gamePage.resPool.get(output);
             if (output == 'parchment' && paperChoice == 'none') break; // user asked for no papers
             if (! outRes.unlocked) continue;
 
@@ -523,7 +502,7 @@ function autoCraft() {
 
 // Auto Research
 function autoResearch() {
-    if (autoCheck[5] != false && gamePage.libraryTab.visible != false) {
+    if (auto.research && gamePage.libraryTab.visible) {
         var buttons = gamePage.libraryTab.buttons;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.metadata.unlocked && buttons[i].model.metadata.researched != true) {
@@ -540,7 +519,7 @@ function autoResearch() {
 
 // Auto Workshop upgrade, tab 3
 function autoWorkshop() {
-    if (autoCheck[6] != false && gamePage.workshopTab.visible != false) {
+    if (auto.workshop && gamePage.workshopTab.visible) {
         var buttons = gamePage.workshopTab.buttons;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.metadata.unlocked && buttons[i].model.metadata.researched != true) {
@@ -557,7 +536,7 @@ function autoWorkshop() {
 
 // Auto buy relgion upgrades
 function autoReligion() {
-    if (autoCheck[13] != false && gamePage.religionTab.visible != false) {
+    if (auto.religion && gamePage.religionTab.visible) {
         var buttons = gamePage.religionTab.rUpgradeButtons;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.visible && buttons[i].model.metadata.researched != true) {
@@ -574,7 +553,7 @@ function autoReligion() {
 
 // Auto buy unicorn upgrades
 function autoUnicorn() {
-    if (autoCheck[14] != false && gamePage.religionTab.visible != false) {
+    if (auto.unicorn && gamePage.religionTab.visible) {
         /* About Unicorn Rifts
          * Each Tower causes a 0.05% chance for a rift per game-day
          * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
@@ -626,7 +605,7 @@ function autoUnicorn() {
 
 // Festival automatically
 function autoParty() {
-    if (autoCheck[7] != false && gamePage.science.get("drama").researched) {
+    if (auto.party && gamePage.science.get("drama").researched) {
         var catpower = gamePage.resPool.get('manpower').value;
         var culture = gamePage.resPool.get('culture').value;
         var parchment = gamePage.resPool.get('parchment').value;
@@ -643,14 +622,14 @@ function autoParty() {
 
 // Auto assign new kittens to selected job
 function autoAssign() {
-    if (autoCheck[8] != false && gamePage.village.getJob(autoChoice).unlocked) {
+    if (auto.assign && gamePage.village.getJob(autoChoice).unlocked) {
         gamePage.village.assignJob(gamePage.village.getJob(autoChoice), 1);
     }
 }
 
 // Try to manupulate time to force the cycle of our choosing
 function autoCycle() {
-    if (autoCheck[12] != false && game.calendar.cycle != cycleChoice) {
+    if (auto.cycle && game.calendar.cycle != cycleChoice) {
         // desired cycle: cycleChoice
         // current cycle: game.calendar.cycle
         // year in cycle: game.calendar.cycleYear
@@ -669,33 +648,10 @@ function autoCycle() {
         }
     }
 }
-
-// Try to manupulate time to force the cycle of our choosing
-function autoCycle() {
-    if (autoCheck[12] != false && game.calendar.cycle != cycleChoice) {
-        // desired cycle: cycleChoice
-        // current cycle: game.calendar.cycle
-        // year in cycle: game.calendar.cycleYear
-        var deltaCycle = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
-        var deltaYears = deltaCycle*5 - game.calendar.cycleYear;
-        var timeCrystals = gamePage.resPool.get('timeCrystal').value;
-
-        // find and click the button
-        if (timeCrystals != 0 && deltaYears != 0 && deltaYears <= timeCrystals) {
-            for (var i = 0; i < gamePage.timeTab.children.length; i++) {
-                if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
-                    var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
-                    btn.controller.doShatterAmt(btn.model, deltaYears)
-                }
-            }
-        }
-    }
-}
-
 
 // Control Energy Consumption
 function energyControl() {
-    if (autoCheck[9] != false) {
+    if (auto.energy) {
         proVar = gamePage.resPool.energyProd;
         conVar = gamePage.resPool.energyCons;
 
@@ -735,7 +691,7 @@ function energyControl() {
 
 // Auto buys and sells bcoins optimally (not yet tested)
 function autoBCoin() {
-    if (autoCheck[10] != false && gamePage.science.get("antimatter").researched) {
+    if (auto.bcoin && gamePage.science.get("antimatter").researched) {
         // When the price is > 1100 it loses 20-30% of its value
         // 880+ε is the highest it could be after an implosion
         if (gamePage.calendar.cryptoPrice < 881) {
@@ -750,7 +706,7 @@ function autoBCoin() {
 }
 
 function autoNip() {
-    if (autoCheck[0] != false) {
+    if (auto.build) {
         if (gamePage.bld.buildingsData[0].val < 20) {
             $(".btnContent:contains('Gather')").trigger("click");
         }
@@ -764,6 +720,7 @@ var runAllAutomation = setInterval(function() {
     autoPraise();
     autoBuild();
 
+    // every 0.6 seconds
     if (gamePage.timer.ticksTotal % 3 === 0) {
         autoObserve();
         autoCraft();
@@ -772,10 +729,12 @@ var runAllAutomation = setInterval(function() {
         energyControl();
     }
 
+    // every 2 seconds == every game-day
     if (gamePage.timer.ticksTotal % 10 === 0) {
         autoSpace();
     }
 
+    // every 5 seconds
     if (gamePage.timer.ticksTotal % 25 === 0) {
         autoResearch();
         autoWorkshop();
@@ -785,6 +744,7 @@ var runAllAutomation = setInterval(function() {
         autoEmbassy();
     }
 
+    // every minute
     if (gamePage.timer.ticksTotal % 300 === 2) { // not ===  0 to avoid running at the same time as above
         autoCycle();
     } else if (gamePage.timer.ticksTotal % 300 === 151) {
