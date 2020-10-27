@@ -4,12 +4,11 @@ var auto = new Object(); // Is a toggle holder. Use like ``auto.craft = true; if
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
-var bldSmelter = gamePage.bld.buildingsData[15];
-var bldBioLab = gamePage.bld.buildingsData[9];
-var bldOilWell = gamePage.bld.buildingsData[20];
-var bldFactory = gamePage.bld.buildingsData[22];
-var bldCalciner = gamePage.bld.buildingsData[16];
-var bldAccelerator = gamePage.bld.buildingsData[24];
+var bldBioLab = gamePage.bld.getBuildingExt('biolab').meta;
+var bldOilWell = gamePage.bld.getBuildingExt('oilWell').meta;
+var bldFactory = gamePage.bld.getBuildingExt('factory').meta;
+var bldCalciner = gamePage.bld.getBuildingExt('calciner').meta;
+var bldAccelerator = gamePage.bld.getBuildingExt('accelerator').meta;
 
 // These are the assorted variables
 var proVar = gamePage.resPool.energyProd;
@@ -393,7 +392,7 @@ function autoTrade() {
                 var sellIron = game.diplomacy.get("zebras").sells[0];
                 var expectedIron = sellIron.value * sellCount *
                     (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
-                    (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game))
+                    (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
                 if (ironRes.value > (ironRes.maxValue - expectedIron)) {
                     gamePage.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
                 }
@@ -466,7 +465,7 @@ function autoCraft() {
             if (output == 'parchment' && paperChoice == 'none') break; // user asked for no papers
             if (! outRes.unlocked) continue;
 
-            var craftCount = Infinity
+            var craftCount = Infinity;
             for (var j = 0; j < inputs.length; j++) {
                 var inRes = gamePage.resPool.get(inputs[j][0]);
                 craftCount = Math.min(craftCount, Math.floor(inRes.value / inputs[j][1])); // never try to use more than we have
@@ -569,9 +568,9 @@ function autoUnicorn() {
         var bestValue = 0.0;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.metadata.unlocked) {
-                var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion
-                var rifts = buttons[i].model.metadata.effects.riftChance || 0
-                var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'})
+                var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion;
+                var rifts = buttons[i].model.metadata.effects.riftChance || 0;
+                var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'});
                 if (tearCost == null) continue;
                 var value = (ratio * ups + rifts * upsprc) / tearCost.val;
                 if (value > bestValue) {
@@ -586,8 +585,8 @@ function autoUnicorn() {
             var cost = bestButton.model.prices.find(function(element){return element.name==='tears'}).val;
             var unicorns = gamePage.resPool.get('unicorns').value;
             var tears = gamePage.resPool.get('tears').value;
-            var zigs = game.bld.get("ziggurat").on
-            var available = tears + Math.floor(unicorns / 2500) * zigs
+            var zigs = game.bld.get("ziggurat").on;
+            var available = tears + Math.floor(unicorns / 2500) * zigs;
             if (available > cost) {
                 if (tears < cost) {
                     var sacButton = gamePage.religionTab.sacrificeBtn;
