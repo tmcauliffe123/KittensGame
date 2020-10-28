@@ -139,6 +139,7 @@ autoButton('party', "Auto Party") + '</br>' +
 '<br>' +
 
 autoButton('embassy', "Auto Embassy") + '</br>' +
+autoButton('shatter', "Shatterstorm") + '</br>' +
 autoButton('cycle', "Auto Cycle") + '</br>' +
 '<select id="cycleChoice" size="1" onchange="setCycleChoice()">';
 for (var i = 0; i < game.calendar.cycles.length; i++) {
@@ -161,7 +162,7 @@ autoButton('bcoin'   , 'Auto BCoin') + '</br>' +
 $("#footerLinks").append(htmlMenuAddition);
 
 
-var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); width:400px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
+var bldSelectAddition = '<div id="buildingSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); margin-left:auto; width:300px; -webkit-columns: 100px 2; -webkit-column-gap: 20px; -webkit-column-rule: 4px double #DE8D47;" class="dialog help">' +
     '<a href="#" onclick="$(\'#spaceSelect\').toggle(); $(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; left: 15px;">space</a>' +
     '<a href="#" onclick="$(\'#buildingSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
     '<br>';
@@ -169,7 +170,7 @@ bldSelectAddition += buildMenu(buildGroups, buildings, 'buildings');
 bldSelectAddition += '</div>';
 
 
-var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); width:200px" class="dialog help">' +
+var spaceSelectAddition = '<div id="spaceSelect" style="display:none; margin-top:0px; top:50% !important; transform:translateY(-50%); margin-left:auto; width:300px" class="dialog help">' +
     '<a href="#" onclick="$(\'#spaceSelect\').hide(); $(\'#buildingSelect\').toggle();" style="position: absolute; top: 10px; left: 15px;">cath</a>' +
     '<a href="#" onclick="$(\'#spaceSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>' +
     '	</br></br><input type="checkbox" id="programs" class="programs" onchange="programBuild = this.checked; console.log(this.checked);"><label for="programs">Programs</label></br></br>';
@@ -649,6 +650,29 @@ function autoCycle() {
     }
 }
 
+// Keep Shattering as long as Space-Time is cool enough
+function autoShatter() {
+    var ticksPerCycle = 300;
+    if (auto.shatter) {
+        if (game.time.heat < ticksPerCycle * game.getEffect("heatPerTick")) {
+            var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
+            var shatter = (game.getEffect('heatMax') - game.time.heat) / factor;
+            shatter = Math.min(shatter, gamePage.resPool.get('timeCrystal').value);
+            if (shatter > 100) shatter -= shatter % 50; // try to keep same cycle
+
+            // find and click the button
+            if (shatter > 0) {
+                for (var i = 0; i < gamePage.timeTab.children.length; i++) {
+                    if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
+                        var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
+                        btn.controller.doShatterAmt(btn.model, shatter);
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Control Energy Consumption
 function energyControl() {
     if (auto.energy) {
@@ -748,7 +772,7 @@ var runAllAutomation = setInterval(function() {
 
     // every minute
     switch (ticks % 300) {
-        case   1: autoCycle();   break;
+        case   1: autoCycle(); autoShatter();   break;
         case 101: autoUnicorn(); break;
         case 203: autoBCoin();   break;
     }
