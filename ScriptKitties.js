@@ -328,7 +328,7 @@ function autoBuild() {
 
 // Build space stuff automatically
 function autoSpace() {
-    if (auto.space && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
+    if (auto.build && gamePage.tabs[6] && gamePage.tabs[6].planetPanels) {
         // Build space buildings
         outer: for (var z = 0; z < spaceBuildings.length; z++) {
             if (spaceBuildings[z][2] && gamePage.space.getBuilding(spaceBuildings[z][1]).unlocked) {
