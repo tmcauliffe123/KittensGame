@@ -110,6 +110,7 @@ autoButton('build', "Auto Build") + '</br>' +
 
 autoButton('assign', "Auto Assign") +
 '<select id="autoAssignChoice" size="1" onclick="setAutoAssignValue()">' +
+// XXX TODO: auto generate?
 '<option value="woodcutter">Woodcutter</option>' +
 '<option value="farmer" selected="selected">Farmer</option>' +
 '<option value="scholar">Scholar</option>' +
@@ -309,13 +310,9 @@ function autoBuild() {
             if (buildings[z][2] && gamePage.bld.getBuildingExt(buildings[z][1]).meta.unlocked) {
                 for (i = 2; i < gamePage.tabs[0].buttons.length; i++) {
                     if (btn[i].model.metadata.name == buildings[z][1]) {
-                        try {
-                            btn[i].controller.buyItem(btn[i].model, {}, function(result) {
-                                if (result) {btn[i].update();}
-                            });
-                        } catch(err) {
-                            console.log(err);
-                        }
+                        btn[i].controller.buyItem(btn[i].model, {}, function(result) {
+                            if (result) {btn[i].update();}
+                        });
                     }
                 }
             }
@@ -419,13 +416,9 @@ function autoEmbassy() {
                     btn = candidate;
                 }
             }
-            try {
-                btn.controller.buyItem(btn.model, {}, function(result) {
-                    if (result) {btn.update();}
-                });
-            } catch(err) {
-                console.log(err);
-            }
+            btn.controller.buyItem(btn.model, {}, function(result) {
+                if (result) {btn.update();}
+            });
         }
     }
 }
