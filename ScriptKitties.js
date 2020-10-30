@@ -106,7 +106,7 @@ var resources = [
 var paperStarts = resources.findIndex(function(r){return r[0]=='parchment'});
 
 $("#footerLinks").append('<div id="SK_scriptOptions" class="column">'
-    + ' | <a href="#" onclick="selectOptions()"> ScriptKitties </a>'
+    + ' | <a href="#" onclick="$(\'#SK_optionSelect\').toggle();"> ScriptKitties </a>'
     + '</div>');
 $("#game").append(generateMenu());
 $("#SK_optionSelect").hide();
@@ -115,12 +115,12 @@ switchTab('cath'); // default
 
 function generateMenu() {
     // Auto Assign drop-down
-    var workerDropdown = '<select id="SK_assignChoice" style="{{grid}}" onclick="setAutoAssignValue()">';
+    var workerDropdown = '<select id="SK_assignChoice" style="{{grid}}" onclick="autoChoice=this.value;">';
     gamePage.village.jobs.forEach(job => { workerDropdown += `<option value="${job.name}">${job.title}</option>`; });
     workerDropdown += '</select>';
 
     // Auto Craft Paper drop-down
-    var paperDropdown = '<select id="SK_paperChoice" style="{{grid}}" onchange="setFurValue()">';
+    var paperDropdown = '<select id="SK_paperChoice" style="{{grid}}" onchange="paperChoice=this.value;">';
     paperDropdown += '<option value="none" selected="selected">None</option>';
     paperDropdown += '<option value="parchment">Parchment</option>';
     paperDropdown += '<option value="manuscript">Manuscript</option>';
@@ -129,7 +129,7 @@ function generateMenu() {
     paperDropdown += '</select>';
 
     // Auto Cycle drop-down
-    var cycleDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="setCycleChoice()">';
+    var cycleDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="cycleChoice=parseInt(this.value);">';
     for (var i = 0; i < game.calendar.cycles.length; i++) {
         var cycle = game.calendar.cycles[i];
         var sel = (i==cycleChoice) ? ' selected="selected"' : '';
@@ -141,7 +141,7 @@ function generateMenu() {
     var grid = [ // Grid Layout
         [autoButton('Kill Switch', 'clearScript()')],
         [autoButton('Check Efficiency', 'kittenEfficiency()')],
-        [autoSwitchButton('Auto Build', 'build'), autoButton('Select Building', 'selectBuildings()')],
+        [autoSwitchButton('Auto Build', 'build'), autoButton('Select Building', '$(\'#SK_buildingSelect\').toggle();')],
         [autoSwitchButton('Auto Assign', 'assign'), workerDropdown],
         [autoSwitchButton('Auto Craft', 'craft'), paperDropdown],
         ['<label style="{{grid}}">Secondary Craft %</label>', `<span style="{{grid}}" title="Between 0 and 100"><input type="text" style="width:25px" onchange="secResRatio=this.value" value="${secResRatio}"></span>`],
@@ -159,7 +159,7 @@ function generateMenu() {
     ];
 
     var menu = '<div id="SK_optionSelect" class="dialog" style="display:grid; grid-template-columns:177px 177px; column-gap:5px; row-gap:5px; left:auto; top:auto !important; right:30px; bottom: 30px; padding:10px">';
-    menu += '<a href="#" onclick="clearOptionHelpDiv();" style="position: absolute; top: 10px; right: 15px;">close</a>';
+    menu += '<a href="#" onclick="$(\'#SK_optionSelect\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
     for (var row = 0; row < grid.length; row++) {
         for (var col = 0; col < grid[row].length; col++) {
             if (!grid[row][col].includes('{{grid}}')) console.warn(`Cell at [${row+1},${col+1}] does not have position marker`);
@@ -273,34 +273,6 @@ function verifyElementSelected(id, elements) {
             return;
         }
     }
-}
-
-function clearOptionHelpDiv() {
-    $("#SK_optionSelect").hide();
-}
-
-function selectOptions() {
-    $("#SK_optionSelect").toggle();
-}
-
-function clearHelpDiv() {
-    $("#SK_buildingSelect").hide();
-}
-
-function selectBuildings() {
-    $("#SK_buildingSelect").toggle();
-}
-
-function setFurValue() {
-    paperChoice = $('#SK_paperChoice').val();
-}
-
-function setAutoAssignValue() {
-    autoChoice = $('#SK_assignChoice').val();
-}
-
-function setCycleChoice() {
-    cycleChoice = parseInt($('#SK_cycleChoice').val());
 }
 
 function autoSwitch(id, element) {
