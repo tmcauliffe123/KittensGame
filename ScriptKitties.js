@@ -15,7 +15,6 @@ var paperChoice = 'none';
 var autoChoice = "farmer";
 var cycleChoice = 0;
 var secResRatio = 25;
-var steamOn = 0;
 
 
 /* These are the data structures that govern the automation scripts */
@@ -367,10 +366,6 @@ function autoBuild() {
                     if (result) {buttons[i].update();}
                 });
             }
-        }
-        if (gamePage.getResourcePerTick('coal') > 0.01 && steamOn < 1) {
-            gamePage.bld.getBuildingExt('steamworks').meta.on = gamePage.bld.getBuildingExt('steamworks').meta.val;
-            steamOn = 1;
         }
     }
 }
