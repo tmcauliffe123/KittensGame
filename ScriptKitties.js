@@ -340,7 +340,7 @@ function kittenEfficiency() {
 
 
 // Auto Observe Astronomical Events
-function autoObserve() {
+function autoObserve(ticksPerCycle) {
     var checkObserveBtn = document.getElementById("observeBtn");
     if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
         document.getElementById('observeBtn').click();
@@ -348,14 +348,15 @@ function autoObserve() {
 }
 
 // Auto praise the sun
-function autoPraise() {
+function autoPraise(ticksPerCycle) {
     if (auto.praise && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
         gamePage.religion.praise();
     }
 }
 
 // Build buildings automatically
-function autoBuild() {
+function autoBuild(ticksPerCycle) {
+    var built = false;
     if (auto.build && gamePage.ui.activeTabId == 'Bonfire') {
         var buttons = gamePage.tabs[0].buttons;
 
@@ -363,15 +364,17 @@ function autoBuild() {
             var name = buttons[i].model.metadata.name;
             if (buttons[i].model.enabled && cathBuildings[name].enabled) {
                 buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
-                    if (result) {buttons[i].update();}
+                    if (result) {built = true; buttons[i].update();}
                 });
             }
         }
     }
+    return built;
 }
 
 // Build space stuff automatically
-function autoSpace() {
+function autoSpace(ticksPerCycle) {
+    var built = false;
     if (auto.build && gamePage.spaceTab && gamePage.spaceTab.planetPanels) {
         // Build space buildings
         for (i = 0; i < gamePage.spaceTab.planetPanels.length; i++) {
@@ -382,7 +385,7 @@ function autoSpace() {
                     if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                     if (spBuild.model.enabled) {
                         spBuild.controller.buyItem(spBuild.model, {}, function(result) {
-                            if (result) {spBuild.update();}
+                            if (result) {built = true; spBuild.update();}
                         });
                     }
                 }
@@ -397,17 +400,19 @@ function autoSpace() {
                     if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
                     if (spcProg[i].model.enabled) {
                         spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-                            if (result) {spcProg[i].update();}
+                            if (result) {built = true; spcProg[i].update();}
                         });
                     }
                 }
             }
         }
     }
+    return built;
 }
 
 // Build religion/time stuff automatically
-function autoTime() {
+function autoTime(ticksPerCycle) {
+    var built = false;
     if (auto.build) {
         var buttonGroups = [
             gamePage.religionTab?.zgUpgradeButtons,
@@ -424,7 +429,7 @@ function autoTime() {
                         if (! button.model.enabled) button.controller.updateEnabled(button.model);
                         if (button.model.enabled) {
                             button.controller.buyItem(button.model, {}, function(result) {
-                                if (result) {button.update();}
+                                if (result) {built = true; button.update();}
                             });
                         }
                     }
@@ -432,12 +437,12 @@ function autoTime() {
             }
         }
     }
+    return built;
 }
 
 // Trade automatically
-function autoTrade() {
-    var ticksPerCycle = 25;
-    // autoTrade happens every 25 ticks
+function autoTrade(ticksPerCycle) {
+    var traded = false;
     if (auto.trade) {
         var goldResource = gamePage.resPool.get('gold');
         var goldPerCycle = gamePage.getResourcePerTick('gold') * ticksPerCycle;
@@ -452,6 +457,7 @@ function autoTrade() {
 
             if (unoRes.value > 5000 && gamePage.diplomacy.get('leviathans').unlocked && gamePage.diplomacy.get('leviathans').duration != 0) {
                 gamePage.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
+                traded = true;
             } else if (tiRes.value < (tiRes.maxValue * 0.9) && gamePage.diplomacy.get('zebras').unlocked) {
                 // don't waste the iron, make some space for it.
                 var ironRes = gamePage.resPool.get('iron');
@@ -468,15 +474,19 @@ function autoTrade() {
                 var expectedTi = game.resPool.get("ship").value * 0.03;
                 sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
                 gamePage.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
+                traded = true;
             //} else if (gamePage.diplomacy.get('dragons').unlocked) {
             //    gamePage.diplomacy.tradeMultiple(game.diplomacy.get("dragons"), sellCount);
+            //    traded = true;
             }
         }
     }
+    return traded;
 }
 
 // Build Embassies automatically
-function autoEmbassy() {
+function autoEmbassy(ticksPerCycle) {
+    var built = false;
     if (auto.embassy && gamePage.diplomacyTab.racePanels && gamePage.diplomacyTab.racePanels[0]) {
         var culture = gamePage.resPool.get('culture');
         if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
@@ -489,24 +499,26 @@ function autoEmbassy() {
                 }
             }
             btn.controller.buyItem(btn.model, {}, function(result) {
-                if (result) {btn.update();}
+                if (result) {built = true; btn.update();}
             });
         }
     }
+    return built;
 }
 
 // Hunt automatically
-function autoHunt() {
+function autoHunt(ticksPerCycle) {
     if (auto.hunt) {
         var catpower = gamePage.resPool.get('manpower');
         if (catpower.value > (catpower.maxValue - 1)) {
             gamePage.village.huntAll();
         }
     }
+    return false; // we huntAll(), shouldn't need to run again
 }
 
 // Craft primary resources automatically
-function autoCraft() {
+function autoCraft(ticksPerCycle) {
     /* Note: In this function, rounding gives us grief.
      * If we have enough resource to craft 3.75 of of something, and ask for
      * that, the game rounds up to 4 and then fails because we don't have
@@ -520,8 +532,6 @@ function autoCraft() {
      * wasting resources, and in some cases *cough*eludium*cough*, we'll be
      * rounding down to zero.
      */
-    var ticksPerCycle = 3; // we execute every 3 ticks
-
     if (auto.craft) {
         // Craft primary resources
         for (var i = 0; i < resources.length; i++) {
@@ -564,10 +574,12 @@ function autoCraft() {
             if (output == paperChoice) break; // i.e. if we're processing the user's choice, then we're done
         }
     }
+    return false; // we scale action to need, re-run never required
 }
 
 // Auto Research
-function autoResearch() {
+function autoResearch(ticksPerCycle) {
+    var acted = false;
     if (auto.research && gamePage.libraryTab.visible) {
         var science = gamePage.resPool.get('science').value;
         var bestButton = null;
@@ -586,43 +598,52 @@ function autoResearch() {
         }
         if (bestButton) {
             bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                if (result) {bestButton.update();}
+                if (result) {acted = true; bestButton.update();}
             });
         }
     }
+    return acted;
 }
 
 // Auto Workshop upgrade, tab 3
-function autoWorkshop() {
+function autoWorkshop(ticksPerCycle) {
+    var acted = false;
     if (auto.workshop && gamePage.workshopTab.visible) {
-        var buttons = gamePage.workshopTab.buttons;
-        for (var i = 0; i < buttons.length; i++) {
-            if (buttons[i].model.metadata.unlocked && buttons[i].model.metadata.researched != true) {
-                if ( ! buttons[i].model.enabled) buttons[i].update();
-                if (buttons[i].model.enabled) {
-                    buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
-                        if (result) {buttons[i].update();}
-                    });
+        var science = gamePage.resPool.get('science').value;
+        var bestButton = null;
+        var bestCost = Infinity;
+        for (button of gamePage.workshopTab.buttons) {
+            var cost = 0;
+            for (price of button.model.prices) if (price.name == 'science') cost = price.val
+            if (cost < science && cost < bestCost &&
+                    button.model.metadata.unlocked && button.model.metadata.researched != true) {
+                if ( ! button.model.enabled) button.update();
+                if (button.model.enabled) {
+                    bestButton = button;
+                    bestCost = cost;
                 }
             }
         }
+        if (bestButton) {
+            bestButton.controller.buyItem(bestButton.model, {}, function(result) {
+                if (result) {acted = true; bestButton.update();}
+            });
+        }
     }
+    return acted;
 }
 
 // Auto buy religion upgrades
-function autoReligion() {
+function autoReligion(ticksPerCycle) {
+    var bought = false;
     if (auto.religion && gamePage.religionTab.visible) {
-        var bought = false;
         var buttons = gamePage.religionTab.rUpgradeButtons;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.visible && buttons[i].model.metadata.researched != true) {
                 if ( ! buttons[i].model.enabled) buttons[i].update();
                 if (buttons[i].model.enabled) {
                     buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
-                        if (result) {
-                            bought = true;
-                            buttons[i].update();
-                        }
+                        if (result) { bought = true; buttons[i].update(); }
                     });
                 }
             }
@@ -633,10 +654,12 @@ function autoReligion() {
             auto.praise = true;
         }
     }
+    return bought;
 }
 
 // Auto buy unicorn upgrades
-function autoUnicorn() {
+function autoUnicorn(ticksPerCycle) {
+    var acted = false;
     if (auto.unicorn && gamePage.religionTab.visible) {
         /* About Unicorn Rifts
          * Each Tower causes a 0.05% chance for a rift per game-day
@@ -680,15 +703,16 @@ function autoUnicorn() {
                 }
                 if ( ! bestButton.model.enabled) bestButton.update();
                 bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                    if (result) {bestButton.update();}
+                    if (result) {acted = true; bestButton.update();}
                 });
             }
         }
     }
+    return acted;
 }
 
 // Festival automatically
-function autoParty() {
+function autoParty(ticksPerCycle) {
     if (auto.party && gamePage.science.get("drama").researched) {
         var catpower = gamePage.resPool.get('manpower').value;
         var culture = gamePage.resPool.get('culture').value;
@@ -702,17 +726,21 @@ function autoParty() {
             }
         }
     }
+    return false; // there is never a need to re-run
 }
 
 // Auto assign new kittens to selected job
-function autoAssign() {
-    if (auto.assign && gamePage.village.getJob(autoChoice).unlocked) {
+function autoAssign(ticksPerCycle) {
+    if (auto.assign && gamePage.village.getJob(autoChoice).unlocked && gamePage.village.hasFreeKittens()) {
         gamePage.village.assignJob(gamePage.village.getJob(autoChoice), 1);
+        return true;
+    } else {
+        return false;
     }
 }
 
 // Try to manipulate time to force the cycle of our choosing
-function autoCycle() {
+function autoCycle(ticksPerCycle) {
     if (auto.cycle && gamePage.timeTab.cfPanel.visible && game.calendar.cycle != cycleChoice) {
         // desired cycle: cycleChoice
         // current cycle: game.calendar.cycle
@@ -730,7 +758,7 @@ function autoCycle() {
 }
 
 // Keep Shattering as long as Space-Time is cool enough
-function autoShatter() {
+function autoShatter(ticksPerCycle) {
     var ticksPerCycle = 300;
     if (auto.shatter) {
         if (game.time.heat < ticksPerCycle * game.getEffect("heatPerTick")) {
@@ -753,7 +781,7 @@ function autoShatter() {
 }
 
 // Control Energy Consumption
-function energyControl() {
+function energyControl(ticksPerCycle) {
     if (auto.energy) {
         proVar = gamePage.resPool.energyProd;
         conVar = gamePage.resPool.energyCons;
@@ -790,10 +818,11 @@ function energyControl() {
             conVar--;
         }
     }
+    return false;
 }
 
 // Auto buys and sells bcoins optimally (not yet tested)
-function autoBCoin() {
+function autoBCoin(ticksPerCycle) {
     if (auto.bcoin && gamePage.science.get("antimatter").researched) {
         // When the price is > 1100 it loses 20-30% of its value
         // 880+ε is the highest it could be after an implosion
@@ -807,51 +836,62 @@ function autoBCoin() {
             gamePage.diplomacy.sellBcoin();
         }
     }
+    return false;
 }
 
-function autoNip() {
+function autoNip(ticksPerCycle) {
     if (auto.build && gamePage.bld.buildingsData[0].val < 20) {
         $(".btnContent:contains('Gather')").trigger("click");
     }
+    return false;
 }
+
+/** This governs how frequently tasks are run
+ *   fn: what function to run
+ *   interval: how often to run, in ticks, that's 0.2 seconds
+ *   offset: small value to stagger runs, MUST be less than interval
+ *   override: force run next tick, dynamic, used to take sequences of actions
+ **/
+var autoSchedule = [
+    // every tick
+    {fn:autoBuild,    interval:1,  offset:0,   override:false},
+    {fn:autoNip,      interval:1,  offset:0,   override:false},
+    {fn:autoPraise,   interval:1,  offset:0,   override:false},
+
+    // every 0.6 seconds
+    {fn:autoCraft,    interval:3,  offset:0,   override:false},
+    {fn:autoObserve,  interval:3,  offset:1,   override:false},
+    {fn:autoHunt,     interval:3,  offset:2,   override:false},
+
+    // every 2 seconds == every game-day
+    {fn:energyControl,interval:10, offset:2,   override:false},
+    {fn:autoSpace,    interval:10, offset:4,   override:false},
+    {fn:autoParty,    interval:10, offset:6,   override:false},
+    {fn:autoTime,     interval:10, offset:8,   override:false},
+
+    // every 4 seconds; schedule on odd numbers to avoid the interval:10
+    {fn:autoAssign,   interval:20, offset:3,   override:false},
+    {fn:autoResearch, interval:20, offset:7,   override:false},
+    {fn:autoWorkshop, interval:20, offset:9,   override:false},
+    {fn:autoReligion, interval:20, offset:13,  override:false},
+    {fn:autoTrade,    interval:20, offset:15,  override:false},
+    {fn:autoEmbassy,  interval:20, offset:19,  override:false},
+
+    // every minute, schedule == 10%20 to avoid both above
+    {fn:autoCycle,    interval:300, offset:10,  override:false},
+    {fn:autoShatter,  interval:300, offset:70,  override:false},
+    {fn:autoUnicorn,  interval:300, offset:130, override:false},
+    {fn:autoBCoin,    interval:300, offset:230, override:false},
+]
 
 // This function keeps track of the game's ticks and uses math to execute these functions at set times relative to the game.
 // Offsets are staggered to spread out the load. (Not that there is much).
 clearInterval(runAllAutomation);
 var runAllAutomation = setInterval(function() {
-    autoNip();
-    autoPraise();
-    autoBuild();
-
-    ticks = gamePage.timer.ticksTotal
-
-    // every 0.6 seconds
-    switch (ticks % 3) {
-        case 0: autoCraft(); break;
-        case 1: autoObserve(); autoHunt(); autoAssign(); break;
-        case 2: energyControl(); break;
-    }
-
-    // every 2 seconds == every game-day
-    switch (ticks % 10) {
-        case 1: autoSpace(); break;
-        case 2: autoParty(); break;
-        case 3: autoTime(); break;
-    }
-
-    // every 5 seconds
-    switch (ticks % 25) {
-        case  2: autoResearch(); break;
-        case  7: autoWorkshop(); break;
-        case 12: autoReligion(); break;
-        case 17: autoTrade();    break;
-        case 22: autoEmbassy();  break;
-    }
-
-    // every minute
-    switch (ticks % 300) {
-        case   1: autoCycle(); autoShatter(); break;
-        case 101: autoUnicorn(); break;
-        case 203: autoBCoin();   break;
+    var ticks = gamePage.timer.ticksTotal;
+    for (task of autoSchedule) {
+        if (task.override || ticks % task.interval == task.offset) {
+            task.override = task.fn(task.interval);
+        }
     }
 }, 200);
