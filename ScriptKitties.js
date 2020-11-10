@@ -739,8 +739,29 @@ function autoAssign(ticksPerCycle) {
     }
 }
 
+function autoDoShatter(years) {
+    // limit to 5 years per tick, mostly to allow crafting time
+    var timeslip = false;
+    if (years > 5) {
+        years = 5;
+        timeslip = true;
+    }
+
+    // mass craft
+    var shatterTCGain = game.getEffect("shatterTCGain") * (1 + game.getEffect("rrRatio"));
+    var cal = game.calendar;
+    var ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
+    autoCraft(shatterTCGain * ticksPassing);
+
+    // do shatter
+    var btn = gamePage.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
+    btn.controller.doShatterAmt(btn.model, years);
+    return timeslip;
+}
+
 // Try to manipulate time to force the cycle of our choosing
-function autoCycle(ticksPerCycle) {
+function autoCycle(ticksPerCycle, shattering) {
+    var timeslip = false;
     if (auto.cycle && gamePage.timeTab.cfPanel.visible && game.calendar.cycle != cycleChoice) {
         // desired cycle: cycleChoice
         // current cycle: game.calendar.cycle
@@ -751,33 +772,31 @@ function autoCycle(ticksPerCycle) {
 
         // click the button
         if (timeCrystals != 0 && deltaYears != 0 && deltaYears <= timeCrystals) {
-            var btn = gamePage.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
-            btn.controller.doShatterAmt(btn.model, deltaYears);
+            timeslip = autoDoShatter(deltaYears);
         }
     }
+    return timeslip;
 }
 
 // Keep Shattering as long as Space-Time is cool enough
-function autoShatter(ticksPerCycle) {
-    var ticksPerCycle = 300;
-    if (auto.shatter) {
-        if (game.time.heat < ticksPerCycle * game.getEffect("heatPerTick")) {
-            var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
-            var shatter = (game.getEffect('heatMax') - game.time.heat) / factor;
-            shatter = Math.min(shatter, gamePage.resPool.get('timeCrystal').value);
-            if (shatter > 100) shatter -= shatter % 50; // try to keep same cycle
+function autoShatter(ticksPerCycle, shattering) {
+    var timeslip = false;
+    if (auto.shatter && gamePage.timeTab.cfPanel.visible) {
+        // only run in the first couple days per season, to preserve void
+        if (game.calendar.day * game.calendar.ticksPerDay < 2 * ticksPerCycle && game.calendar.day >= 0) {
+            if (shattering || game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"))) {
+                // how many shatters worth of heat can we afford?
+                var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
+                var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
+                if (auto.cycle) shatter -= 45; // leave space for autoCycle
+                shatter = Math.min(shatter, Math.floor(gamePage.resPool.get('timeCrystal').value));
 
-            // find and click the button
-            if (shatter > 0) {
-                for (var i = 0; i < gamePage.timeTab.children.length; i++) {
-                    if (gamePage.timeTab.children[i].name == "Chronoforge" && gamePage.timeTab.children[i].visible) {
-                        var btn = gamePage.timeTab.children[i].children[0].children[0]; // no idea why there's two layers in the code
-                        btn.controller.doShatterAmt(btn.model, shatter);
-                    }
-                }
+                // find and click the button
+                if (shatter>0) timeslip = autoDoShatter(shatter);
             }
         }
     }
+    return timeslip;
 }
 
 // Control Energy Consumption
@@ -875,11 +894,11 @@ var autoSchedule = [
     {fn:autoWorkshop, interval:20, offset:9,   override:false},
     {fn:autoReligion, interval:20, offset:13,  override:false},
     {fn:autoTrade,    interval:20, offset:15,  override:false},
+    {fn:autoShatter,  interval:20, offset:17,  override:false},
     {fn:autoEmbassy,  interval:20, offset:19,  override:false},
 
     // every minute, schedule == 10%20 to avoid both above
     {fn:autoCycle,    interval:300, offset:10,  override:false},
-    {fn:autoShatter,  interval:300, offset:70,  override:false},
     {fn:autoUnicorn,  interval:300, offset:130, override:false},
     {fn:autoBCoin,    interval:300, offset:230, override:false},
 ]
@@ -891,7 +910,7 @@ var runAllAutomation = setInterval(function() {
     var ticks = gamePage.timer.ticksTotal;
     for (task of autoSchedule) {
         if (task.override || ticks % task.interval == task.offset) {
-            task.override = task.fn(task.interval);
+            task.override = task.fn(task.interval, task.override);
         }
     }
 }, 200);
