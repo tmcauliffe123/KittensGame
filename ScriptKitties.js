@@ -25,12 +25,12 @@ var secResRatio = 25;
 
 
 var minorOptions = {
-    observe:{name:"Auto Observe", enabled:true}, // XXX TODO
-    explore:{name:"Auto Explore", enabled:false}, // XXX TODO
-    feed:{name:"Auto Feed Elders", enabled:false}, // XXX TODO
-    promote:{name:"Auto Promote Leader", enabled:false}, // XXX TODO
+    observe:{name:"Auto Observe", enabled:true},
+    explore:{name:"Auto Explore", enabled:false},
+    feed:{name:"Auto Feed Elders", enabled:false},
+    promote:{name:"Auto Promote Leader", enabled:false},
     religion2praise:{name:"Praise After Religion", enabled:false},
-    unicornIvory:{name:"Unicorn Ivory Optimization", enabled:false}, // XXX TODO
+    unicornIvory:{name:"Unicorn Ivory Optimization", enabled:false},
 };
 
 // Building lists for controlling Auto Build/Space/Time
@@ -339,11 +339,82 @@ function kittenEfficiency() {
 /* These are the functions which are controlled by the runAllAutomation timer */
 
 
-// Auto Observe Astronomical Events
-function autoObserve(ticksPerCycle) {
-    var checkObserveBtn = document.getElementById("observeBtn");
-    if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
-        document.getElementById('observeBtn').click();
+// Collection of Minor Auto Tasks
+function autoMinor(ticksPerCycle) {
+    if (minorOptions.feed.enabled) {
+        if (game.resPool.get("necrocorn").value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
+            var energy = game.diplomacy.get("leviathans").energy || 0;
+            // I'd rather a less hardcoded method, but that's what they use
+            // alternative would be parsing the text, but that seems just as hacky
+            var markerCap = Math.floor(
+                (game.religion.getZU("marker").getEffectiveValue(game) * 5 + 5) *
+                (1 + game.getEffect("leviathansEnergyModifier"))
+            );
+            if (energy < markerCap) {
+                game.diplomacy.feedElders();
+            }
+        }
+    }
+    if (minorOptions.observe.enabled) {
+        var checkObserveBtn = document.getElementById("observeBtn");
+        if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
+            document.getElementById('observeBtn').click();
+        }
+    }
+    if (minorOptions.promote.enabled) {
+        var leader = game.village.leader;
+        if (leader) {
+            var expToPromote = game.village.getRankExp(leader.rank);
+            var goldToPromote = 25 * (leader.rank + 1);
+            if (leader.exp >= expToPromote && game.resPool.get("gold").value >= goldToPromote) {
+                if (game.village.sim.promote(leader) > 0) {
+                    var census = game.villageTab.censusPanel.census;
+                    census.renderGovernment(census.container);
+                    census.update();
+                }
+            }
+        }
+    }
+    if (minorOptions.explore.enabled) {
+        if (game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
+            var available = false;
+            for (race of game.diplomacy.races) {
+                if (race.unlocked) continue;
+                switch(race.name) {
+                    case 'lizards': case 'sharks': case 'griffins':
+                        available = true;
+                        break;
+                    case 'nagas':
+                        available = game.resPool.get("culture").value >= 1500;
+                        break;
+                    case 'zebras':
+                        available = game.resPool.get("ship").value >= 1;
+                        break;
+                    case 'spiders':
+                        available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
+                        break;
+                    case 'dragons':
+                        available = game.science.get("nuclearFission").researched;
+                        break;
+                    case 'leviathans':
+                        break;
+                    default:
+                        console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
+                }
+                if (available) {
+                    console.log(`Going to explore, hoping for a ${race.name}`);
+                    break;
+                }
+            }
+            if (available) {
+                var button = game.diplomacyTab.exploreBtn;
+                button.controller.buyItem(button.model, {}, function(result) {
+                    if (result) {built = true; buttons[i].update();}
+                });
+            } else {
+                console.log("no explore options");
+            }
+        }
     }
 }
 
@@ -666,8 +737,12 @@ function autoUnicorn(ticksPerCycle) {
          * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
          */
         var riftUnicorns = 500 * (1 + game.getEffect("unicornsRatioReligion") * 0.1);
-        var upsprc = riftUnicorns / (100000/5); // unicorns per second per riftChance
+        var unicornChanceRatio = 1.1 * (1 + game.getEffect("timeRatio") * 0.25);
+        var upsprc = riftUnicorns * unicornChanceRatio / 2; // unicorns per second per riftChance
         var ups = 5 * gamePage.getResourcePerTick('unicorns') / (1 + game.getEffect("unicornsRatioReligion"));
+        // Constants for Ivory Meteors
+        var meteorChance = game.getEffect("ivoryMeteorChance") * unicornChanceRatio / 2;
+        var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect("ivoryMeteorRatio"));
 
         // find which is the best value
         var buttons = gamePage.religionTab.zgUpgradeButtons;
@@ -675,11 +750,19 @@ function autoUnicorn(ticksPerCycle) {
         var bestValue = 0.0;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.metadata.unlocked) {
-                var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion;
-                var rifts = buttons[i].model.metadata.effects.riftChance || 0;
-                var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'});
-                if (tearCost == null) continue;
-                var value = (ratio * ups + rifts * upsprc) / tearCost.val;
+                if (! minorOptions.unicornIvory.enabled) {
+                    var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'});
+                    if (tearCost == null) continue;
+                    var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion;
+                    var rifts = buttons[i].model.metadata.effects.riftChance || 0;
+                    var value = (ratio * ups + rifts * upsprc) / tearCost.val;
+                } else {
+                    var ivoryCost = buttons[i].model.prices.find(function(element){return element.name==='ivory'});
+                    if (ivoryCost == null) continue;
+                    var ratio = buttons[i].model.metadata.effects.ivoryMeteorRatio || 0;
+                    var chance = buttons[i].model.metadata.effects.ivoryMeteorChance || 0;
+                    value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
+                }
                 if (value > bestValue) {
                     bestButton = buttons[i];
                     bestValue = value;
@@ -689,22 +772,31 @@ function autoUnicorn(ticksPerCycle) {
 
         // can we afford it?
         if (bestButton != null) {
-            var cost = bestButton.model.prices.find(function(element){return element.name==='tears'}).val;
-            var unicorns = gamePage.resPool.get('unicorns').value;
-            var tears = gamePage.resPool.get('tears').value;
-            var zigs = game.bld.get("ziggurat").on;
-            var available = tears + Math.floor(unicorns / 2500) * zigs;
-            if (available > cost) {
-                if (tears < cost) {
-                    var sacButton = gamePage.religionTab.sacrificeBtn;
-                    // XXX: I don't like calling an internal function like _transform
-                    // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
-                    sacButton.controller._transform(sacButton.model, Math.ceil((cost - tears) / zigs));
+            var otherCosts = true;
+            for (price of bestButton.model.prices) {
+                if (price.name == 'tears') {
+                    var tearCost = price.val;
+                } else if (price.val > gamePage.resPool.get(price.name).value) {
+                    otherCosts = false;
                 }
-                if ( ! bestButton.model.enabled) bestButton.update();
-                bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                    if (result) {acted = true; bestButton.update();}
-                });
+            }
+            if (otherCosts) {
+                var unicorns = gamePage.resPool.get('unicorns').value;
+                var tears = gamePage.resPool.get('tears').value;
+                var zigs = game.bld.get("ziggurat").on;
+                var available = tears + Math.floor(unicorns / 2500) * zigs;
+                if (available > tearCost) {
+                    if (tears < tearCost) {
+                        var sacButton = gamePage.religionTab.sacrificeBtn;
+                        // XXX: I don't like calling an internal function like _transform
+                        // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
+                        sacButton.controller._transform(sacButton.model, Math.ceil((tearCost - tears) / zigs));
+                    }
+                    if ( ! bestButton.model.enabled) bestButton.update();
+                    bestButton.controller.buyItem(bestButton.model, {}, function(result) {
+                        if (result) {acted = true; bestButton.update();}
+                    });
+                }
             }
         }
     }
@@ -879,7 +971,7 @@ var autoSchedule = [
 
     // every 0.6 seconds
     {fn:autoCraft,    interval:3,  offset:0,   override:false},
-    {fn:autoObserve,  interval:3,  offset:1,   override:false},
+    {fn:autoMinor,    interval:3,  offset:1,   override:false},
     {fn:autoHunt,     interval:3,  offset:2,   override:false},
 
     // every 2 seconds == every game-day
