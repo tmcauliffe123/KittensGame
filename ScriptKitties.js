@@ -26,7 +26,6 @@ var secResRatio = 25;
 
 var minorOptions = {
     observe:{name:"Auto Observe", enabled:true},
-    explore:{name:"Auto Explore", enabled:false},
     feed:{name:"Auto Feed Elders", enabled:false},
     promote:{name:"Auto Promote Leader", enabled:false},
     religion2praise:{name:"Praise After Religion", enabled:false},
@@ -173,7 +172,7 @@ function generateMenu() {
         ['<span style="height:10px;{{grid}}"></span>'],
         [autoSwitchButton('Auto Hunt', 'hunt'), autoSwitchButton('Auto Praise', 'praise')],
         [autoSwitchButton('Auto Trade', 'trade'), autoSwitchButton('Auto Embassy', 'embassy')],
-        [autoSwitchButton('Auto Party', 'party')],
+        [autoSwitchButton('Auto Party', 'party'), autoSwitchButton('Auto Explore', 'explore')],
         ['<span style="height:10px;{{grid}}"></span>'],
         [autoSwitchButton('Auto Cycle', 'cycle'), cycleDropdown],
         [autoSwitchButton('Shatterstorm', 'shatter'), autoSwitchButton('Auto BCoin', 'bcoin')],
@@ -375,47 +374,6 @@ function autoMinor(ticksPerCycle) {
             }
         }
     }
-    if (minorOptions.explore.enabled) {
-        if (game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
-            var available = false;
-            for (race of game.diplomacy.races) {
-                if (race.unlocked) continue;
-                switch(race.name) {
-                    case 'lizards': case 'sharks': case 'griffins':
-                        available = true;
-                        break;
-                    case 'nagas':
-                        available = game.resPool.get("culture").value >= 1500;
-                        break;
-                    case 'zebras':
-                        available = game.resPool.get("ship").value >= 1;
-                        break;
-                    case 'spiders':
-                        available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
-                        break;
-                    case 'dragons':
-                        available = game.science.get("nuclearFission").researched;
-                        break;
-                    case 'leviathans':
-                        break;
-                    default:
-                        console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
-                }
-                if (available) {
-                    console.log(`Going to explore, hoping for a ${race.name}`);
-                    break;
-                }
-            }
-            if (available) {
-                var button = game.diplomacyTab.exploreBtn;
-                button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {built = true; buttons[i].update();}
-                });
-            } else {
-                console.log("no explore options");
-            }
-        }
-    }
 }
 
 // Auto praise the sun
@@ -546,9 +504,6 @@ function autoTrade(ticksPerCycle) {
                 sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
                 gamePage.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
                 traded = true;
-            //} else if (gamePage.diplomacy.get('dragons').unlocked) {
-            //    gamePage.diplomacy.tradeMultiple(game.diplomacy.get("dragons"), sellCount);
-            //    traded = true;
             }
         }
     }
@@ -575,6 +530,50 @@ function autoEmbassy(ticksPerCycle) {
         }
     }
     return built;
+}
+
+// Explore for new Civs
+function autoExplore(ticksPerCycle) {
+    var available = false;
+    if (auto.explore && game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
+        for (race of game.diplomacy.races) {
+            if (race.unlocked) continue;
+            switch(race.name) {
+                case 'lizards': case 'sharks': case 'griffins':
+                    available = true;
+                    break;
+                case 'nagas':
+                    available = game.resPool.get("culture").value >= 1500;
+                    break;
+                case 'zebras':
+                    available = game.resPool.get("ship").value >= 1;
+                    break;
+                case 'spiders':
+                    available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
+                    break;
+                case 'dragons':
+                    available = game.science.get("nuclearFission").researched;
+                    break;
+                case 'leviathans':
+                    break;
+                default:
+                    console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
+            }
+            if (available) {
+                console.log(`SK_Debug: Going to explore, hoping for a ${race.name}`);
+                break;
+            }
+        }
+        if (available) {
+            var button = game.diplomacyTab.exploreBtn;
+            button.controller.buyItem(button.model, {}, function(result) {
+                if (result) {built = true; buttons[i].update();}
+            });
+        } else {
+            console.log("SK_Debug: no explore options");
+        }
+    }
+    return available;
 }
 
 // Hunt automatically
@@ -658,8 +657,7 @@ function autoResearch(ticksPerCycle) {
         for (button of gamePage.libraryTab.buttons) {
             var cost = 0;
             for (price of button.model.prices) if (price.name == 'science') cost = price.val
-            if (cost < science && cost < bestCost &&
-                    button.model.metadata.unlocked && button.model.metadata.researched != true) {
+            if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
                 if ( ! button.model.enabled) button.update();
                 if (button.model.enabled) {
                     bestButton = button;
@@ -686,8 +684,7 @@ function autoWorkshop(ticksPerCycle) {
         for (button of gamePage.workshopTab.buttons) {
             var cost = 0;
             for (price of button.model.prices) if (price.name == 'science') cost = price.val
-            if (cost < science && cost < bestCost &&
-                    button.model.metadata.unlocked && button.model.metadata.researched != true) {
+            if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
                 if ( ! button.model.enabled) button.update();
                 if (button.model.enabled) {
                     bestButton = button;
@@ -991,6 +988,7 @@ var autoSchedule = [
 
     // every minute, schedule == 10%20 to avoid both above
     {fn:autoCycle,    interval:300, offset:10,  override:false},
+    {fn:autoExplore,  interval:300, offset:70,  override:false},
     {fn:autoUnicorn,  interval:300, offset:130, override:false},
     {fn:autoBCoin,    interval:300, offset:230, override:false},
 ]
