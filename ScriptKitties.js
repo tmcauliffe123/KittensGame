@@ -425,8 +425,8 @@ function autoSpace(ticksPerCycle) {
     var built = false;
     if (auto.build && gamePage.spaceTab && gamePage.spaceTab.planetPanels) {
         // Build space buildings
-        for (i = 0; i < gamePage.spaceTab.planetPanels.length; i++) {
-            for (j = 0; j < gamePage.spaceTab.planetPanels[i].children.length; j++) {
+        for (var i = 0; i < gamePage.spaceTab.planetPanels.length; i++) {
+            for (var j = 0; j < gamePage.spaceTab.planetPanels[i].children.length; j++) {
                 var spBuild = gamePage.spaceTab.planetPanels[i].children[j];
                 if (spaceBuildings[spBuild.id].enabled && gamePage.space.getBuilding(spBuild.id).unlocked) {
                     // .enabled doesn't update automatically unless the tab is active, force it
@@ -578,18 +578,13 @@ function autoExplore(ticksPerCycle) {
                 default:
                     console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
             }
-            if (available) {
-                console.log(`SK_Debug: Going to explore, hoping for a ${race.name}`);
-                break;
-            }
+            if (available) break;
         }
-        if (available) {
+        if (available && game.diplomacyTab.exploreBtn) {
             var button = game.diplomacyTab.exploreBtn;
             button.controller.buyItem(button.model, {}, function(result) {
                 if (result) {built = true; button.update();}
             });
-        } else {
-            console.log("SK_Debug: no explore options");
         }
     }
     return available;
@@ -654,7 +649,7 @@ function autoCraft(ticksPerCycle) {
                     craftCount = Math.min(craftCount, (inRes.value / inputs[j][1]));
                 }
                 // for when our capacity gets large compared to production
-                minimumReserve = Math.min(minimumReserve, (inRes.value / inputs[j][1]) * (minSecResRatio / 100) - outRes.value);
+                minimumReserve = Math.min(minimumReserve, (inRes.value / inputs[j][1]) * (minSecResRatio / 100) - outRes.value / game.getEffect('craftRatio'));
             }
             craftCount = Math.max(craftCount, minimumReserve);
             if (craftCount == 0 || craftCount == Infinity) {
@@ -681,7 +676,7 @@ function autoResearch(ticksPerCycle) {
             var cost = 0;
             for (price of button.model.prices) {
                 if (price.name == 'science') cost = price.val;
-                if (minorOptions.conserveRare.enabled && rareResources.includes(prices.name)) {
+                if (minorOptions.conserveRare.enabled && rareResources.includes(price.name)) {
                     continue techloop;
                 }
             }
@@ -709,9 +704,14 @@ function autoWorkshop(ticksPerCycle) {
         var science = gamePage.resPool.get('science').value;
         var bestButton = null;
         var bestCost = Infinity;
-        for (button of gamePage.workshopTab.buttons) {
+        workloop: for (button of gamePage.workshopTab.buttons) {
             var cost = 0;
-            for (price of button.model.prices) if (price.name == 'science') cost = price.val
+            for (price of button.model.prices) {
+                if (price.name == 'science') cost = price.val;
+                if (minorOptions.conserveRare.enabled && rareResources.includes(price.name)) {
+                    continue workloop;
+                }
+            }
             if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
                 if ( ! button.model.enabled) button.update();
                 if (button.model.enabled) {
