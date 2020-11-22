@@ -14,9 +14,10 @@ var bldAccelerator = gamePage.bld.getBuildingExt('accelerator').meta;
 var paperChoice = 'none';
 var autoChoice = "farmer";
 var cycleChoice = 0;
-var secResRatio = 25;
+var minSecResRatio = 1;
+var maxSecResRatio = 25;
 
-// 
+//
 var rareResources = [
     "antimatter",
     "blackcoin",
@@ -181,7 +182,12 @@ function generateMenu() {
         [autoSwitchButton('Auto Build', 'build'), autoButton('Select Building', '$(\'#SK_buildingOptions\').toggle();')],
         [autoSwitchButton('Auto Assign', 'assign'), workerDropdown],
         [autoSwitchButton('Auto Craft', 'craft'), paperDropdown],
-        ['<label style="{{grid}}">Secondary Craft %</label>', `<span style="{{grid}}" title="Between 0 and 100"><input type="text" style="width:25px" onchange="secResRatio=this.value" value="${secResRatio}"></span>`],
+        ['<label style="{{grid}}">Secondary Craft %</label>',
+            `<span style="display:flex; justify-content:space-around; {{grid}}" title="Between 0 and 100">`
+            + `<label>min:</label><input type="text" style="width:25px" onchange="minSecResRatio=this.value" value="${minSecResRatio}">`
+            + `<label>max:</label><input type="text" style="width:25px" onchange="maxSecResRatio=this.value" value="${maxSecResRatio}">`
+            + `</span>`
+        ],
         ['<span style="height:10px;{{grid}}"></span>'],
         [autoSwitchButton('Auto Hunt', 'hunt'), autoSwitchButton('Auto Praise', 'praise')],
         [autoSwitchButton('Auto Trade', 'trade'), autoSwitchButton('Auto Embassy', 'embassy')],
@@ -625,6 +631,7 @@ function autoCraft(ticksPerCycle) {
             if (! outRes.unlocked) continue;
 
             var craftCount = Infinity;
+            var minimumReserve = Infinity;
             for (var j = 0; j < inputs.length; j++) {
                 var inRes = gamePage.resPool.get(inputs[j][0]);
                 craftCount = Math.min(craftCount, Math.floor(inRes.value / inputs[j][1])); // never try to use more than we have
@@ -640,13 +647,16 @@ function autoCraft(ticksPerCycle) {
                 } else if (i < paperStarts) {
                     // secondary resource
                     var resMath = inRes.value / inputs[j][1];
-                    if (resMath <= 1 || outRes.value > (inRes.value * (secResRatio / 100))) craftCount = 0;
-                    craftCount = Math.min(craftCount, resMath * (secResRatio / 100));
+                    if (resMath <= 1 || outRes.value > (inRes.value * (maxSecResRatio / 100))) craftCount = 0;
+                    craftCount = Math.min(craftCount, resMath * (maxSecResRatio / 100));
                 } else {
                     // secondary resource: fur, parchment, manuscript, compendium
                     craftCount = Math.min(craftCount, (inRes.value / inputs[j][1]));
                 }
+                // for when our capacity gets large compared to production
+                minimumReserve = Math.min(minimumReserve, (inRes.value / inputs[j][1]) * (minSecResRatio / 100) - outRes.value);
             }
+            craftCount = Math.max(craftCount, minimumReserve);
             if (craftCount == 0 || craftCount == Infinity) {
                 // nothing to do
             } else if (paperChoice == 'blueprint' && output == 'compedium' && gamePage.resPool.get('compedium').value > 25) {
