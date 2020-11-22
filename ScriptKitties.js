@@ -16,6 +16,17 @@ var autoChoice = "farmer";
 var cycleChoice = 0;
 var secResRatio = 25;
 
+// 
+var rareResources = [
+    "antimatter",
+    "blackcoin",
+    "eludium",
+    "relic",
+    "temporalFlux",
+    "timeCrystal",
+    "unobtainium",
+    "void",
+];
 
 /* These are the data structures that govern the automation scripts */
 /* These are the data structures that govern the automation scripts */
@@ -28,8 +39,10 @@ var minorOptions = {
     observe:{name:"Auto Observe", enabled:true},
     feed:{name:"Auto Feed Elders", enabled:false},
     promote:{name:"Auto Promote Leader", enabled:false},
+    wait4void:{name:"Only Shatter at Season Start", enabled:false},
     religion2praise:{name:"Praise After Religion", enabled:false},
     unicornIvory:{name:"Unicorn Ivory Optimization", enabled:false},
+    conserveRare:{name:"Conserve Rare Resources", enabled:true},
 };
 
 // Building lists for controlling Auto Build/Space/Time
@@ -567,7 +580,7 @@ function autoExplore(ticksPerCycle) {
         if (available) {
             var button = game.diplomacyTab.exploreBtn;
             button.controller.buyItem(button.model, {}, function(result) {
-                if (result) {built = true; buttons[i].update();}
+                if (result) {built = true; button.update();}
             });
         } else {
             console.log("SK_Debug: no explore options");
@@ -654,9 +667,14 @@ function autoResearch(ticksPerCycle) {
         var science = gamePage.resPool.get('science').value;
         var bestButton = null;
         var bestCost = Infinity;
-        for (button of gamePage.libraryTab.buttons) {
+        techloop: for (button of gamePage.libraryTab.buttons) {
             var cost = 0;
-            for (price of button.model.prices) if (price.name == 'science') cost = price.val
+            for (price of button.model.prices) {
+                if (price.name == 'science') cost = price.val;
+                if (minorOptions.conserveRare.enabled && rareResources.includes(prices.name)) {
+                    continue techloop;
+                }
+            }
             if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
                 if ( ! button.model.enabled) button.update();
                 if (button.model.enabled) {
@@ -848,40 +866,36 @@ function autoDoShatter(years) {
     return timeslip;
 }
 
-// Try to manipulate time to force the cycle of our choosing
-function autoCycle(ticksPerCycle, shattering) {
-    var timeslip = false;
-    if (auto.cycle && gamePage.timeTab.cfPanel.visible && game.calendar.cycle != cycleChoice) {
-        // desired cycle: cycleChoice
-        // current cycle: game.calendar.cycle
-        // year in cycle: game.calendar.cycleYear
-        var deltaCycle = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
-        var deltaYears = deltaCycle*5 - game.calendar.cycleYear;
-        var timeCrystals = gamePage.resPool.get('timeCrystal').value;
-
-        // click the button
-        if (timeCrystals != 0 && deltaYears != 0 && deltaYears <= timeCrystals) {
-            timeslip = autoDoShatter(deltaYears);
-        }
-    }
-    return timeslip;
-}
-
 // Keep Shattering as long as Space-Time is cool enough
 function autoShatter(ticksPerCycle, shattering) {
     var timeslip = false;
-    if (auto.shatter && gamePage.timeTab.cfPanel.visible) {
-        // only run in the first couple days per season, to preserve void
-        if (game.calendar.day * game.calendar.ticksPerDay < 2 * ticksPerCycle && game.calendar.day >= 0) {
-            if (shattering || game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"))) {
+    if (auto.shatter || auto.cycle) {
+        if (gamePage.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
+            var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
+            var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"));
+            var startStorm = shattering || (minorOptions.wait4void.enabled ? startOfSeason : true) && lowHeat;
+
+            // find length of shatter storm
+            var shatter = 0;
+            if (auto.shatter && startStorm) {
                 // how many shatters worth of heat can we afford?
                 var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
                 var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
-                if (auto.cycle) shatter -= 45; // leave space for autoCycle
-                shatter = Math.min(shatter, Math.floor(gamePage.resPool.get('timeCrystal').value));
+            }
 
-                // find and click the button
-                if (shatter>0) timeslip = autoDoShatter(shatter);
+            // adjust to end in the right cycle
+            if (auto.cycle && game.calendar.cycle != cycleChoice) {
+                // desired cycle: cycleChoice
+                // current cycle: game.calendar.cycle
+                // year in cycle: game.calendar.cycleYear
+                var deltaCycle = (cycleChoice - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+                var yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
+                shatter = Math.floor(shatter / 50)*50 + yearsToCycle;
+            }
+
+            // click the button
+            if (shatter != 0 && shatter < gamePage.resPool.get('timeCrystal').value) {
+                timeslip = autoDoShatter(shatter);
             }
         }
     }
@@ -987,7 +1001,6 @@ var autoSchedule = [
     {fn:autoEmbassy,  interval:20, offset:19,  override:false},
 
     // every minute, schedule == 10%20 to avoid both above
-    {fn:autoCycle,    interval:300, offset:10,  override:false},
     {fn:autoExplore,  interval:300, offset:70,  override:false},
     {fn:autoUnicorn,  interval:300, offset:130, override:false},
     {fn:autoBCoin,    interval:300, offset:230, override:false},
