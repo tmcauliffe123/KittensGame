@@ -4,11 +4,11 @@ var auto = {}; // Is a toggle holder. Use like ``auto.craft = true; if (auto.cra
 var programBuild = false;
 
 // These will allow quick selection of the buildings which consume energy
-var bldBioLab = gamePage.bld.getBuildingExt('biolab').meta;
-var bldOilWell = gamePage.bld.getBuildingExt('oilWell').meta;
-var bldFactory = gamePage.bld.getBuildingExt('factory').meta;
-var bldCalciner = gamePage.bld.getBuildingExt('calciner').meta;
-var bldAccelerator = gamePage.bld.getBuildingExt('accelerator').meta;
+var bldBioLab = game.bld.getBuildingExt('biolab').meta;
+var bldOilWell = game.bld.getBuildingExt('oilWell').meta;
+var bldFactory = game.bld.getBuildingExt('factory').meta;
+var bldCalciner = game.bld.getBuildingExt('calciner').meta;
+var bldAccelerator = game.bld.getBuildingExt('accelerator').meta;
 
 // These are the assorted variables
 var paperChoice = 'none';
@@ -51,7 +51,7 @@ var cathBuildings = {/* list is auto-generated, looks like:
     field:{name:"Catnip Field", enabled:false},
     ...
 */};
-buildGroup(gamePage.bld.buildingsData, cathBuildings);
+buildGroup(game.bld.buildingsData, cathBuildings);
 
 // Group like buildings for menu. Needs to be manual, because it's a judgement call.
 var cathGroups = [
@@ -82,8 +82,8 @@ var spaceGroups = [/*
     ["cath", ["spaceElevator", "sattelite", "spaceStation"]],
     ...
 */];
-for (var i=0; i<gamePage.space.planets.length; i++) {
-    var planet = gamePage.space.planets[i];
+for (var i=0; i<game.space.planets.length; i++) {
+    var planet = game.space.planets[i];
     spaceGroups.push([planet.label, buildGroup(planet.buildings, spaceBuildings)]);
 }
 
@@ -95,16 +95,16 @@ var timeGroups = [/*
     // As above
     ...
 */];
-timeGroups.push(['Ziggurats', buildGroup(gamePage.religion.zigguratUpgrades, timeBuildings)]);
-timeGroups.push(['Cryptotheology', buildGroup(gamePage.religion.transcendenceUpgrades, timeBuildings)]);
-timeGroups.push(['Chronoforge', buildGroup(gamePage.time.chronoforgeUpgrades, timeBuildings)]);
-timeGroups.push(['Void Space', buildGroup(gamePage.time.voidspaceUpgrades, timeBuildings)]);
+timeGroups.push(['Ziggurats', buildGroup(game.religion.zigguratUpgrades, timeBuildings)]);
+timeGroups.push(['Cryptotheology', buildGroup(game.religion.transcendenceUpgrades, timeBuildings)]);
+timeGroups.push(['Chronoforge', buildGroup(game.time.chronoforgeUpgrades, timeBuildings)]);
+timeGroups.push(['Void Space', buildGroup(game.time.voidspaceUpgrades, timeBuildings)]);
 
 function buildGroup(upgrades, buildings) {
     var group = [];
     for (var i=0; i<upgrades.length; i++) {
         var data = upgrades[i];
-        if (upgrades==gamePage.religion.zigguratUpgrades && data.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
+        if (upgrades==game.religion.zigguratUpgrades && data.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
         if (! data.stages) var label = data.label;
         else var label = data.stages.map(function(x){return x.label}).join(' / '); // for "Library / Data Center", etc
         buildings[data.name] = {name:label, enabled:false};
@@ -154,7 +154,7 @@ $("#game").append(generateMinorOptionsMenu());
 function generateMenu() {
     // Auto Assign drop-down
     var workerDropdown = '<select id="SK_assignChoice" style="{{grid}}" onclick="autoChoice=this.value;">';
-    gamePage.village.jobs.forEach(job => { workerDropdown += `<option value="${job.name}">${job.title}</option>`; });
+    game.village.jobs.forEach(job => { workerDropdown += `<option value="${job.name}">${job.title}</option>`; });
     workerDropdown += '</select>';
 
     // Auto Craft Paper drop-down
@@ -323,7 +323,7 @@ function verifyElementSelected(elements, id, checked) {
 
 function autoSwitch(id, element) {
     auto[id] = !auto[id];
-    gamePage.msg(`${element} is now  ${(auto[id] ? 'on' : 'off')}`);
+    game.msg(`${element} is now  ${(auto[id] ? 'on' : 'off')}`);
     $(`#${element}`).toggleClass('disabled', !auto[id]);
 }
 
@@ -338,15 +338,15 @@ function clearScript() {
     spaceSelectAddition = null;
     htmlMenuAddition = null;
     clearInterval();
-    gamePage.msg('Script is dead');
+    game.msg('Script is dead');
 }
 
 // Show current kitten efficiency in the in-game log
 function kittenEfficiency() {
     var secondsPlayed = game.calendar.trueYear() * game.calendar.seasonsPerYear * game.calendar.daysPerSeason * game.calendar.ticksPerDay / game.ticksPerSecond;
-    var numberKittens = gamePage.resPool.get('kittens').value;
+    var numberKittens = game.resPool.get('kittens').value;
     var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
-    gamePage.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
+    game.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
 }
 
 
@@ -397,16 +397,16 @@ function autoMinor(ticksPerCycle) {
 
 // Auto praise the sun
 function autoPraise(ticksPerCycle) {
-    if (auto.praise && gamePage.bld.getBuildingExt('temple').meta.val > 0) {
-        gamePage.religion.praise();
+    if (auto.praise && game.bld.getBuildingExt('temple').meta.val > 0) {
+        game.religion.praise();
     }
 }
 
 // Build buildings automatically
 function autoBuild(ticksPerCycle) {
     var built = false;
-    if (auto.build && gamePage.ui.activeTabId == 'Bonfire') {
-        var buttons = gamePage.tabs[0].buttons;
+    if (auto.build && game.ui.activeTabId == 'Bonfire') {
+        var buttons = game.tabs[0].buttons;
 
         for (i = 2; i < buttons.length; i++) {
             var name = buttons[i].model.metadata.name;
@@ -423,12 +423,12 @@ function autoBuild(ticksPerCycle) {
 // Build space stuff automatically
 function autoSpace(ticksPerCycle) {
     var built = false;
-    if (auto.build && gamePage.spaceTab && gamePage.spaceTab.planetPanels) {
+    if (auto.build && game.spaceTab && game.spaceTab.planetPanels) {
         // Build space buildings
-        for (var i = 0; i < gamePage.spaceTab.planetPanels.length; i++) {
-            for (var j = 0; j < gamePage.spaceTab.planetPanels[i].children.length; j++) {
-                var spBuild = gamePage.spaceTab.planetPanels[i].children[j];
-                if (spaceBuildings[spBuild.id].enabled && gamePage.space.getBuilding(spBuild.id).unlocked) {
+        for (var i = 0; i < game.spaceTab.planetPanels.length; i++) {
+            for (var j = 0; j < game.spaceTab.planetPanels[i].children.length; j++) {
+                var spBuild = game.spaceTab.planetPanels[i].children[j];
+                if (spaceBuildings[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked) {
                     // .enabled doesn't update automatically unless the tab is active, force it
                     if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                     if (spBuild.model.enabled) {
@@ -441,8 +441,8 @@ function autoSpace(ticksPerCycle) {
         }
 
         // Build space programs
-        if (programBuild && gamePage.spaceTab && gamePage.spaceTab.GCPanel) {
-            var spcProg = gamePage.spaceTab.GCPanel.children;
+        if (programBuild && game.spaceTab && game.spaceTab.GCPanel) {
+            var spcProg = game.spaceTab.GCPanel.children;
             for (var i = 0; i < spcProg.length; i++) {
                 if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
                     if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
@@ -463,10 +463,10 @@ function autoTime(ticksPerCycle) {
     var built = false;
     if (auto.build) {
         var buttonGroups = [
-            gamePage.religionTab?.zgUpgradeButtons,
-            gamePage.religionTab?.ctPanel?.children[0]?.children,
-            gamePage.timeTab?.cfPanel?.children[0]?.children,
-            gamePage.timeTab?.vsPanel?.children[0]?.children
+            game.religionTab?.zgUpgradeButtons,
+            game.religionTab?.ctPanel?.children[0]?.children,
+            game.timeTab?.cfPanel?.children[0]?.children,
+            game.timeTab?.vsPanel?.children[0]?.children
         ];
 
         for (buttons of buttonGroups) {
@@ -492,36 +492,36 @@ function autoTime(ticksPerCycle) {
 function autoTrade(ticksPerCycle) {
     var traded = false;
     if (auto.trade) {
-        var goldResource = gamePage.resPool.get('gold');
-        var goldPerCycle = gamePage.getResourcePerTick('gold') * ticksPerCycle;
-        var powerResource = gamePage.resPool.get('manpower');
-        var powerPerCycle = gamePage.getResourcePerTick('manpower') * ticksPerCycle;
+        var goldResource = game.resPool.get('gold');
+        var goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
+        var powerResource = game.resPool.get('manpower');
+        var powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
         var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
         var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
 
         if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
-            var tiRes = gamePage.resPool.get('titanium');
-            var unoRes = gamePage.resPool.get('unobtainium');
+            var tiRes = game.resPool.get('titanium');
+            var unoRes = game.resPool.get('unobtainium');
 
-            if (unoRes.value > 5000 && gamePage.diplomacy.get('leviathans').unlocked && gamePage.diplomacy.get('leviathans').duration != 0) {
-                gamePage.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
+            if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && game.diplomacy.get('leviathans').duration != 0) {
+                game.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
                 traded = true;
-            } else if (tiRes.value < (tiRes.maxValue * 0.9) && gamePage.diplomacy.get('zebras').unlocked) {
+            } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
                 // don't waste the iron, make some space for it.
-                var ironRes = gamePage.resPool.get('iron');
+                var ironRes = game.resPool.get('iron');
                 var sellIron = game.diplomacy.get("zebras").sells[0];
                 var expectedIron = sellIron.value * sellCount *
                     (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
                     (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
                 if (ironRes.value > (ironRes.maxValue - expectedIron)) {
-                    gamePage.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
+                    game.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
                 }
 
                 // don't overdo it
                 var deltaTi = tiRes.maxValue - tiRes.value;
                 var expectedTi = game.resPool.get("ship").value * 0.03;
                 sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
-                gamePage.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
+                game.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
                 traded = true;
             }
         }
@@ -532,10 +532,10 @@ function autoTrade(ticksPerCycle) {
 // Build Embassies automatically
 function autoEmbassy(ticksPerCycle) {
     var built = false;
-    if (auto.embassy && gamePage.diplomacyTab.racePanels && gamePage.diplomacyTab.racePanels[0]) {
-        var culture = gamePage.resPool.get('culture');
+    if (auto.embassy && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
+        var culture = game.resPool.get('culture');
         if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
-            var panels = gamePage.diplomacyTab.racePanels;
+            var panels = game.diplomacyTab.racePanels;
             var btn = panels[0].embassyButton;
             for (var z = 1; z < panels.length; z++) {
                 var candidate = panels[z].embassyButton;
@@ -593,9 +593,9 @@ function autoExplore(ticksPerCycle) {
 // Hunt automatically
 function autoHunt(ticksPerCycle) {
     if (auto.hunt) {
-        var catpower = gamePage.resPool.get('manpower');
+        var catpower = game.resPool.get('manpower');
         if (catpower.value > (catpower.maxValue - 1)) {
-            gamePage.village.huntAll();
+            game.village.huntAll();
         }
     }
     return false; // we huntAll(), shouldn't need to run again
@@ -621,19 +621,19 @@ function autoCraft(ticksPerCycle) {
         for (var i = 0; i < resources.length; i++) {
             var output = resources[i][0];
             var inputs = resources[i][1];
-            var outRes = gamePage.resPool.get(output);
+            var outRes = game.resPool.get(output);
             if (output == 'parchment' && paperChoice == 'none') break; // user asked for no papers
             if (! outRes.unlocked) continue;
 
             var craftCount = Infinity;
             var minimumReserve = Infinity;
             for (var j = 0; j < inputs.length; j++) {
-                var inRes = gamePage.resPool.get(inputs[j][0]);
+                var inRes = game.resPool.get(inputs[j][0]);
                 craftCount = Math.min(craftCount, Math.floor(inRes.value / inputs[j][1])); // never try to use more than we have
 
                 if (inRes.maxValue != 0) {
                     // primary resource
-                    var resourcePerCycle = gamePage.getResourcePerTick(inputs[j][0], 0) * ticksPerCycle;
+                    var resourcePerCycle = game.getResourcePerTick(inputs[j][0], 0) * ticksPerCycle;
                     if (resourcePerCycle < inRes.maxValue && inRes.value < (inRes.maxValue - resourcePerCycle)) {
                         craftCount = 0;
                     } else {
@@ -654,10 +654,10 @@ function autoCraft(ticksPerCycle) {
             craftCount = Math.max(craftCount, minimumReserve);
             if (craftCount == 0 || craftCount == Infinity) {
                 // nothing to do
-            } else if (paperChoice == 'blueprint' && output == 'compedium' && gamePage.resPool.get('compedium').value > 25) {
+            } else if (paperChoice == 'blueprint' && output == 'compedium' && game.resPool.get('compedium').value > 25) {
                 // save science for making blueprints
             } else {
-                gamePage.craft(output, craftCount);
+                game.craft(output, craftCount);
             }
             if (output == paperChoice) break; // i.e. if we're processing the user's choice, then we're done
         }
@@ -668,11 +668,11 @@ function autoCraft(ticksPerCycle) {
 // Auto Research
 function autoResearch(ticksPerCycle) {
     var acted = false;
-    if (auto.research && gamePage.libraryTab.visible) {
-        var science = gamePage.resPool.get('science').value;
+    if (auto.research && game.libraryTab.visible) {
+        var science = game.resPool.get('science').value;
         var bestButton = null;
         var bestCost = Infinity;
-        techloop: for (button of gamePage.libraryTab.buttons) {
+        techloop: for (button of game.libraryTab.buttons) {
             var cost = 0;
             for (price of button.model.prices) {
                 if (price.name == 'science') cost = price.val;
@@ -700,11 +700,11 @@ function autoResearch(ticksPerCycle) {
 // Auto Workshop upgrade, tab 3
 function autoWorkshop(ticksPerCycle) {
     var acted = false;
-    if (auto.workshop && gamePage.workshopTab.visible) {
-        var science = gamePage.resPool.get('science').value;
+    if (auto.workshop && game.workshopTab.visible) {
+        var science = game.resPool.get('science').value;
         var bestButton = null;
         var bestCost = Infinity;
-        workloop: for (button of gamePage.workshopTab.buttons) {
+        workloop: for (button of game.workshopTab.buttons) {
             var cost = 0;
             for (price of button.model.prices) {
                 if (price.name == 'science') cost = price.val;
@@ -732,8 +732,8 @@ function autoWorkshop(ticksPerCycle) {
 // Auto buy religion upgrades
 function autoReligion(ticksPerCycle) {
     var bought = false;
-    if (auto.religion && gamePage.religionTab.visible) {
-        var buttons = gamePage.religionTab.rUpgradeButtons;
+    if (auto.religion && game.religionTab.visible) {
+        var buttons = game.religionTab.rUpgradeButtons;
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].model.visible && buttons[i].model.metadata.researched != true) {
                 if ( ! buttons[i].model.enabled) buttons[i].update();
@@ -744,7 +744,7 @@ function autoReligion(ticksPerCycle) {
                 }
             }
         }
-        var faith = gamePage.resPool.get('faith');
+        var faith = game.resPool.get('faith');
         if (minorOptions.religion2praise.enabled && bought == false && faith.value >= faith.maxValue) {
             autoSwitch('praise', 'SK_autoPraise');
             auto.praise = true;
@@ -756,7 +756,7 @@ function autoReligion(ticksPerCycle) {
 // Auto buy unicorn upgrades
 function autoUnicorn(ticksPerCycle) {
     var acted = false;
-    if (auto.unicorn && gamePage.religionTab.visible) {
+    if (auto.unicorn && game.religionTab.visible) {
         /* About Unicorn Rifts
          * Each Tower causes a 0.05% chance for a rift per game-day
          * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
@@ -764,13 +764,13 @@ function autoUnicorn(ticksPerCycle) {
         var riftUnicorns = 500 * (1 + game.getEffect("unicornsRatioReligion") * 0.1);
         var unicornChanceRatio = 1.1 * (1 + game.getEffect("timeRatio") * 0.25);
         var upsprc = riftUnicorns * unicornChanceRatio / 2; // unicorns per second per riftChance
-        var ups = 5 * gamePage.getResourcePerTick('unicorns') / (1 + game.getEffect("unicornsRatioReligion"));
+        var ups = 5 * game.getResourcePerTick('unicorns') / (1 + game.getEffect("unicornsRatioReligion"));
         // Constants for Ivory Meteors
         var meteorChance = game.getEffect("ivoryMeteorChance") * unicornChanceRatio / 2;
         var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect("ivoryMeteorRatio"));
 
         // find which is the best value
-        var buttons = gamePage.religionTab.zgUpgradeButtons;
+        var buttons = game.religionTab.zgUpgradeButtons;
         var bestButton = null;
         var bestValue = 0.0;
         for (var i = 0; i < buttons.length; i++) {
@@ -801,18 +801,18 @@ function autoUnicorn(ticksPerCycle) {
             for (price of bestButton.model.prices) {
                 if (price.name == 'tears') {
                     var tearCost = price.val;
-                } else if (price.val > gamePage.resPool.get(price.name).value) {
+                } else if (price.val > game.resPool.get(price.name).value) {
                     otherCosts = false;
                 }
             }
             if (otherCosts) {
-                var unicorns = gamePage.resPool.get('unicorns').value;
-                var tears = gamePage.resPool.get('tears').value;
+                var unicorns = game.resPool.get('unicorns').value;
+                var tears = game.resPool.get('tears').value;
                 var zigs = game.bld.get("ziggurat").on;
                 var available = tears + Math.floor(unicorns / 2500) * zigs;
                 if (available > tearCost) {
                     if (tears < tearCost) {
-                        var sacButton = gamePage.religionTab.sacrificeBtn;
+                        var sacButton = game.religionTab.sacrificeBtn;
                         // XXX: I don't like calling an internal function like _transform
                         // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
                         sacButton.controller._transform(sacButton.model, Math.ceil((tearCost - tears) / zigs));
@@ -830,16 +830,16 @@ function autoUnicorn(ticksPerCycle) {
 
 // Festival automatically
 function autoParty(ticksPerCycle) {
-    if (auto.party && gamePage.science.get("drama").researched) {
-        var catpower = gamePage.resPool.get('manpower').value;
-        var culture = gamePage.resPool.get('culture').value;
-        var parchment = gamePage.resPool.get('parchment').value;
+    if (auto.party && game.science.get("drama").researched) {
+        var catpower = game.resPool.get('manpower').value;
+        var culture = game.resPool.get('culture').value;
+        var parchment = game.resPool.get('parchment').value;
 
         if (catpower > 1500 && culture > 5000 && parchment > 2500) {
-            if (gamePage.prestige.getPerk("carnivals").researched && gamePage.calendar.festivalDays < 400*10) {
-                gamePage.village.holdFestival(1);
-            } else if (gamePage.calendar.festivalDays == 0) {
-                gamePage.village.holdFestival(1);
+            if (game.prestige.getPerk("carnivals").researched && game.calendar.festivalDays < 400*10) {
+                game.village.holdFestival(1);
+            } else if (game.calendar.festivalDays == 0) {
+                game.village.holdFestival(1);
             }
         }
     }
@@ -848,8 +848,8 @@ function autoParty(ticksPerCycle) {
 
 // Auto assign new kittens to selected job
 function autoAssign(ticksPerCycle) {
-    if (auto.assign && gamePage.village.getJob(autoChoice).unlocked && gamePage.village.hasFreeKittens()) {
-        gamePage.village.assignJob(gamePage.village.getJob(autoChoice), 1);
+    if (auto.assign && game.village.getJob(autoChoice).unlocked && game.village.hasFreeKittens()) {
+        game.village.assignJob(game.village.getJob(autoChoice), 1);
         return true;
     } else {
         return false;
@@ -871,7 +871,7 @@ function autoDoShatter(years) {
     autoCraft(shatterTCGain * ticksPassing);
 
     // do shatter
-    var btn = gamePage.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
+    var btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
     btn.controller.doShatterAmt(btn.model, years);
     return timeslip;
 }
@@ -880,7 +880,7 @@ function autoDoShatter(years) {
 function autoShatter(ticksPerCycle, shattering) {
     var timeslip = false;
     if (auto.shatter || auto.cycle) {
-        if (gamePage.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
+        if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
             var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
             var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"));
             var startStorm = shattering || (minorOptions.wait4void.enabled ? startOfSeason : true) && lowHeat;
@@ -904,7 +904,7 @@ function autoShatter(ticksPerCycle, shattering) {
             }
 
             // click the button
-            if (shatter != 0 && shatter < gamePage.resPool.get('timeCrystal').value) {
+            if (shatter != 0 && shatter < game.resPool.get('timeCrystal').value) {
                 timeslip = autoDoShatter(shatter);
             }
         }
@@ -915,8 +915,8 @@ function autoShatter(ticksPerCycle, shattering) {
 // Control Energy Consumption
 function energyControl(ticksPerCycle) {
     if (auto.energy) {
-        proVar = gamePage.resPool.energyProd;
-        conVar = gamePage.resPool.energyCons;
+        proVar = game.resPool.energyProd;
+        conVar = game.resPool.energyCons;
 
         if (bldAccelerator.val > bldAccelerator.on && proVar > (conVar + 3)) {
             bldAccelerator.on++;
@@ -955,24 +955,24 @@ function energyControl(ticksPerCycle) {
 
 // Auto buys and sells bcoins optimally (not yet tested)
 function autoBCoin(ticksPerCycle) {
-    if (auto.bcoin && gamePage.science.get("antimatter").researched) {
+    if (auto.bcoin && game.science.get("antimatter").researched) {
         // When the price is > 1100 it loses 20-30% of its value
         // 880+ε is the highest it could be after an implosion
         //
         // Prior was buy < 881; sell > 1099
         // However, we want to keep stuffing BC in until the last minute
         // Well, the last hour or two.
-        if (gamePage.calendar.cryptoPrice < 1095) {
-            gamePage.diplomacy.buyBcoin();
-        } else if (gamePage.resPool.get('blackcoin').value > 0) {
-            gamePage.diplomacy.sellBcoin();
+        if (game.calendar.cryptoPrice < 1095) {
+            game.diplomacy.buyBcoin();
+        } else if (game.resPool.get('blackcoin').value > 0) {
+            game.diplomacy.sellBcoin();
         }
     }
     return false;
 }
 
 function autoNip(ticksPerCycle) {
-    if (auto.build && gamePage.bld.buildingsData[0].val < 20) {
+    if (auto.build && game.bld.buildingsData[0].val < 20) {
         $(".btnContent:contains('Gather')").trigger("click");
     }
     return false;
@@ -1020,7 +1020,7 @@ var autoSchedule = [
 // Offsets are staggered to spread out the load. (Not that there is much).
 clearInterval(runAllAutomation);
 var runAllAutomation = setInterval(function() {
-    var ticks = gamePage.timer.ticksTotal;
+    var ticks = game.timer.ticksTotal;
     for (task of autoSchedule) {
         if (task.override || ticks % task.interval == task.offset) {
             task.override = task.fn(task.interval, task.override);
