@@ -406,7 +406,7 @@ function autoPraise(ticksPerCycle) {
 function autoBuild(ticksPerCycle) {
     var built = false;
     if (auto.build && game.ui.activeTabId == 'Bonfire') {
-        var buttons = game.tabs[0].buttons;
+        var buttons = game.bldTab.buttons;
 
         for (i = 2; i < buttons.length; i++) {
             var name = buttons[i].model.metadata.name;
@@ -417,6 +417,7 @@ function autoBuild(ticksPerCycle) {
             }
         }
     }
+    // if (built) game.render(); // update tooltip
     return built;
 }
 
@@ -616,6 +617,10 @@ function autoCraft(ticksPerCycle) {
      * wasting resources, and in some cases *cough*eludium*cough*, we'll be
      * rounding down to zero.
      */
+
+    // TODO: We need a special case for catnip->wood.
+    // In particular, we need to only craft wood if there's room
+    // AND we need to make room by crafting
     if (auto.craft) {
         // Craft primary resources
         for (var i = 0; i < resources.length; i++) {
@@ -972,8 +977,13 @@ function autoBCoin(ticksPerCycle) {
 }
 
 function autoNip(ticksPerCycle) {
-    if (auto.build && game.bld.buildingsData[0].val < 20) {
-        $(".btnContent:contains('Gather')").trigger("click");
+    if (auto.build && game.bld.get('field').val < 20) {
+        $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger("click");
+    }
+    if (auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
+        if (game.bldTab.buttons[1].model.enabled) {
+            $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger("click");
+        }
     }
     return false;
 }
