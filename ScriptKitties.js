@@ -354,9 +354,9 @@ SK.Tasks = class {
          **/
         this.schedule = [
             // every tick
-            {fn:'autoBuild',    interval:1,  offset:0,   override:false},
             {fn:'autoNip',      interval:1,  offset:0,   override:false},
             {fn:'autoPraise',   interval:1,  offset:0,   override:false},
+            {fn:'autoBuild',    interval:1,  offset:0,   override:false},
 
             // every 0.6 seconds
             {fn:'autoCraft',    interval:3,  offset:0,   override:false},
@@ -364,10 +364,10 @@ SK.Tasks = class {
             {fn:'autoHunt',     interval:3,  offset:2,   override:false},
 
             // every 2 seconds == every game-day
-            {fn:'energyControl',interval:10, offset:2,   override:false},
-            {fn:'autoSpace',    interval:10, offset:4,   override:false},
+            {fn:'autoSpace',    interval:10, offset:2,   override:false},
+            {fn:'autoTime',     interval:10, offset:4,   override:false},
             {fn:'autoParty',    interval:10, offset:6,   override:false},
-            {fn:'autoTime',     interval:10, offset:8,   override:false},
+            {fn:'energyControl',interval:10, offset:8,   override:false},
 
             // every 4 seconds; schedule on odd numbers to avoid the interval:10
             {fn:'autoAssign',   interval:20, offset:3,   override:false},
@@ -410,42 +410,30 @@ SK.Tasks = class {
         game.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
     }
 
+    listScripts() {
+        return [
+            {name:'test',        label:'Test Script'},
+            {name:'startup',     label:'Post Chrono Setup'},
+            {name:'fastParagon', label:'Fast Reset'},
+            {name:'chronoloop',  label:'Chrono Reset'},
+            {name:'hoglagame',   label:'Hoglagame'},
+        ];
+    }
+
+    /*** Individual Auto Scripts start here ***/
+    /*** These scripts run every tick ***/
+
     // Collection of Minor Auto Tasks
-    autoMinor(ticksPerCycle) {
-        if (this.model.minor.feed) {
-            if (game.resPool.get("necrocorn").value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
-                var energy = game.diplomacy.get("leviathans").energy || 0;
-                // I'd rather a less hardcoded method, but that's what they use
-                // alternative would be parsing the text, but that seems just as hacky
-                var markerCap = Math.floor(
-                    (game.religion.getZU("marker").getEffectiveValue(game) * 5 + 5) *
-                    (1 + game.getEffect("leviathansEnergyModifier"))
-                );
-                if (energy < markerCap) {
-                    game.diplomacy.feedElders();
-                }
+    autoNip(ticksPerCycle) {
+        if (this.model.auto.build && game.bld.get('field').val < 20) {
+            $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger("click");
+        }
+        if (this.model.auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
+            if (game.bldTab.buttons[1].model.enabled) {
+                $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger("click");
             }
         }
-        if (this.model.minor.observe) {
-            var checkObserveBtn = document.getElementById("observeBtn");
-            if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
-                document.getElementById('observeBtn').click();
-            }
-        }
-        if (this.model.minor.promote) {
-            var leader = game.village.leader;
-            if (leader) {
-                var expToPromote = game.village.getRankExp(leader.rank);
-                var goldToPromote = 25 * (leader.rank + 1);
-                if (leader.exp >= expToPromote && game.resPool.get("gold").value >= goldToPromote) {
-                    if (game.village.sim.promote(leader) > 0) {
-                        var census = game.villageTab.censusPanel.census;
-                        census.renderGovernment(census.container);
-                        census.update();
-                    }
-                }
-            }
-        }
+        return false;
     }
 
     // Auto praise the sun
@@ -474,186 +462,7 @@ SK.Tasks = class {
         return built;
     }
 
-    // Build space stuff automatically
-    autoSpace(ticksPerCycle) {
-        var built = false;
-        if (this.model.auto.build && game.spaceTab && game.spaceTab.planetPanels) {
-            // Build space buildings
-            for (var i = 0; i < game.spaceTab.planetPanels.length; i++) {
-                for (var j = 0; j < game.spaceTab.planetPanels[i].children.length; j++) {
-                    var spBuild = game.spaceTab.planetPanels[i].children[j];
-                    if (this.model.spaceBuildings[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked) {
-                        // .enabled doesn't update automatically unless the tab is active, force it
-                        if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
-                        if (spBuild.model.enabled) {
-                            spBuild.controller.buyItem(spBuild.model, {}, function(result) {
-                                if (result) {built = true; spBuild.update();}
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Build space programs
-            if (this.model.option.program && game.spaceTab && game.spaceTab.GCPanel) {
-                var spcProg = game.spaceTab.GCPanel.children;
-                for (var i = 0; i < spcProg.length; i++) {
-                    if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
-                        if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
-                        if (spcProg[i].model.enabled) {
-                            spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-                                if (result) {built = true; spcProg[i].update();}
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        return built;
-    }
-
-    // Build religion/time stuff automatically
-    autoTime(ticksPerCycle) {
-        var built = false;
-        if (this.model.auto.build) {
-            var buttonGroups = [
-                game.religionTab?.zgUpgradeButtons,
-                game.religionTab?.ctPanel?.children[0]?.children,
-                game.timeTab?.cfPanel?.children[0]?.children,
-                game.timeTab?.vsPanel?.children[0]?.children
-            ];
-
-            for (var buttons of buttonGroups) {
-                if (buttons) {
-                    for (var i = 0; i < buttons.length; i++) {
-                        var button = buttons[i];
-                        if (this.model.timeBuildings[button.id]?.enabled && button.model.metadata.unlocked) {
-                            if (! button.model.enabled) button.controller.updateEnabled(button.model);
-                            if (button.model.enabled) {
-                                button.controller.buyItem(button.model, {}, function(result) {
-                                    if (result) {built = true; button.update();}
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return built;
-    }
-
-    // Trade automatically
-    autoTrade(ticksPerCycle) {
-        var traded = false;
-        if (this.model.auto.trade) {
-            var goldResource = game.resPool.get('gold');
-            var goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
-            var powerResource = game.resPool.get('manpower');
-            var powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
-            var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
-            var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
-
-            if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
-                var tiRes = game.resPool.get('titanium');
-                var unoRes = game.resPool.get('unobtainium');
-
-                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && game.diplomacy.get('leviathans').duration != 0) {
-                    game.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
-                    traded = true;
-                } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
-                    // don't waste the iron, make some space for it.
-                    var ironRes = game.resPool.get('iron');
-                    var sellIron = game.diplomacy.get("zebras").sells[0];
-                    var expectedIron = sellIron.value * sellCount *
-                        (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
-                        (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
-                    if (ironRes.value > (ironRes.maxValue - expectedIron)) {
-                        game.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
-                    }
-
-                    // don't overdo it
-                    var deltaTi = tiRes.maxValue - tiRes.value;
-                    var expectedTi = game.resPool.get("ship").value * 0.03;
-                    sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
-                    game.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
-                    traded = true;
-                }
-            }
-        }
-        return traded;
-    }
-
-    // Build Embassies automatically
-    autoEmbassy(ticksPerCycle) {
-        var built = false;
-        if (this.model.auto.embassy && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
-            var culture = game.resPool.get('culture');
-            if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
-                var panels = game.diplomacyTab.racePanels;
-                var btn = panels[0].embassyButton;
-                for (var z = 1; z < panels.length; z++) {
-                    var candidate = panels[z].embassyButton;
-                    if (candidate && candidate.model.prices[0].val < btn.model.prices[0].val) {
-                        btn = candidate;
-                    }
-                }
-                btn.controller.buyItem(btn.model, {}, function(result) {
-                    if (result) {built = true; btn.update();}
-                });
-            }
-        }
-        return built;
-    }
-
-    // Explore for new Civs
-    autoExplore(ticksPerCycle) {
-        var available = false;
-        if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
-            for (var race of game.diplomacy.races) {
-                if (race.unlocked) continue;
-                switch(race.name) {
-                    case 'lizards': case 'sharks': case 'griffins':
-                        available = true;
-                        break;
-                    case 'nagas':
-                        available = game.resPool.get("culture").value >= 1500;
-                        break;
-                    case 'zebras':
-                        available = game.resPool.get("ship").value >= 1;
-                        break;
-                    case 'spiders':
-                        available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
-                        break;
-                    case 'dragons':
-                        available = game.science.get("nuclearFission").researched;
-                        break;
-                    case 'leviathans':
-                        break;
-                    default:
-                        console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
-                }
-                if (available) break;
-            }
-            if (available && game.diplomacyTab.exploreBtn) {
-                var button = game.diplomacyTab.exploreBtn;
-                button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {built = true; button.update();}
-                });
-            }
-        }
-        return available;
-    }
-
-    // Hunt automatically
-    autoHunt(ticksPerCycle) {
-        if (this.model.auto.hunt) {
-            var catpower = game.resPool.get('manpower');
-            if (catpower.value > (catpower.maxValue - 1)) {
-                game.village.huntAll();
-            }
-        }
-        return false; // we huntAll(), should never need to run again
-    }
+    /*** These scripts run every three ticks ***/
 
     // Craft primary resources automatically
     autoCraft(ticksPerCycle) {
@@ -725,6 +534,195 @@ SK.Tasks = class {
             }
         }
         return false; // we scale action to need, re-run never required
+    }
+
+    autoMinor(ticksPerCycle) {
+        if (this.model.minor.feed) {
+            if (game.resPool.get("necrocorn").value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
+                var energy = game.diplomacy.get("leviathans").energy || 0;
+                // I'd rather a less hardcoded method, but that's what they use
+                // alternative would be parsing the text, but that seems just as hacky
+                var markerCap = Math.floor(
+                    (game.religion.getZU("marker").getEffectiveValue(game) * 5 + 5) *
+                    (1 + game.getEffect("leviathansEnergyModifier"))
+                );
+                if (energy < markerCap) {
+                    game.diplomacy.feedElders();
+                }
+            }
+        }
+        if (this.model.minor.observe) {
+            var checkObserveBtn = document.getElementById("observeBtn");
+            if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
+                document.getElementById('observeBtn').click();
+            }
+        }
+        if (this.model.minor.promote) {
+            var leader = game.village.leader;
+            if (leader) {
+                var expToPromote = game.village.getRankExp(leader.rank);
+                var goldToPromote = 25 * (leader.rank + 1);
+                if (leader.exp >= expToPromote && game.resPool.get("gold").value >= goldToPromote) {
+                    if (game.village.sim.promote(leader) > 0) {
+                        var census = game.villageTab.censusPanel.census;
+                        census.renderGovernment(census.container);
+                        census.update();
+                    }
+                }
+            }
+        }
+    }
+
+    // Hunt automatically
+    autoHunt(ticksPerCycle) {
+        if (this.model.auto.hunt) {
+            var catpower = game.resPool.get('manpower');
+            if (catpower.value > (catpower.maxValue - 1)) {
+                game.village.huntAll();
+            }
+        }
+        return false; // we huntAll(), should never need to run again
+    }
+
+    /*** These scripts run every game day (2 seconds) ***/
+
+    // Build space stuff automatically
+    autoSpace(ticksPerCycle) {
+        var built = false;
+        if (this.model.auto.build && game.spaceTab && game.spaceTab.planetPanels) {
+            // Build space buildings
+            for (var i = 0; i < game.spaceTab.planetPanels.length; i++) {
+                for (var j = 0; j < game.spaceTab.planetPanels[i].children.length; j++) {
+                    var spBuild = game.spaceTab.planetPanels[i].children[j];
+                    if (this.model.spaceBuildings[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked) {
+                        // .enabled doesn't update automatically unless the tab is active, force it
+                        if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
+                        if (spBuild.model.enabled) {
+                            spBuild.controller.buyItem(spBuild.model, {}, function(result) {
+                                if (result) {built = true; spBuild.update();}
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Build space programs
+            if (this.model.option.program && game.spaceTab && game.spaceTab.GCPanel) {
+                var spcProg = game.spaceTab.GCPanel.children;
+                for (var i = 0; i < spcProg.length; i++) {
+                    if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+                        if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
+                        if (spcProg[i].model.enabled) {
+                            spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
+                                if (result) {built = true; spcProg[i].update();}
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return built;
+    }
+
+    // Build religion/time stuff automatically
+    autoTime(ticksPerCycle) {
+        var built = false;
+        if (this.model.auto.build) {
+            var buttonGroups = [
+                game.religionTab?.zgUpgradeButtons,
+                game.religionTab?.ctPanel?.children[0]?.children,
+                game.timeTab?.cfPanel?.children[0]?.children,
+                game.timeTab?.vsPanel?.children[0]?.children
+            ];
+
+            for (var buttons of buttonGroups) {
+                if (buttons) {
+                    for (var i = 0; i < buttons.length; i++) {
+                        var button = buttons[i];
+                        if (this.model.timeBuildings[button.id]?.enabled && button.model.metadata.unlocked) {
+                            if (! button.model.enabled) button.controller.updateEnabled(button.model);
+                            if (button.model.enabled) {
+                                button.controller.buyItem(button.model, {}, function(result) {
+                                    if (result) {built = true; button.update();}
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return built;
+    }
+
+    // Festival automatically
+    autoParty(ticksPerCycle) {
+        if (this.model.auto.party && game.science.get("drama").researched) {
+            var catpower = game.resPool.get('manpower').value;
+            var culture = game.resPool.get('culture').value;
+            var parchment = game.resPool.get('parchment').value;
+
+            if (catpower > 1500 && culture > 5000 && parchment > 2500) {
+                if (game.prestige.getPerk("carnivals").researched && game.calendar.festivalDays < 400*10) {
+                    game.village.holdFestival(1);
+                } else if (game.calendar.festivalDays == 0) {
+                    game.village.holdFestival(1);
+                }
+            }
+        }
+        return false; // there is never a need to re-run
+    }
+
+    // Control Energy Consumption
+    energyControl(ticksPerCycle) {
+        if (this.model.auto.energy) {
+            var proVar = game.resPool.energyProd;
+            var conVar = game.resPool.energyCons;
+
+            if (this.model.power.accelerator.val > this.model.power.accelerator.on && proVar > (conVar + 3)) {
+                this.model.power.accelerator.on++;
+                conVar++;
+            } else if (this.model.power.calciner.val > this.model.power.calciner.on && proVar > (conVar + 3)) {
+                this.model.power.calciner.on++;
+                conVar++;
+            } else if (this.model.power.factory.val > this.model.power.factory.on && proVar > (conVar + 3)) {
+                this.model.power.factory.on++;
+                conVar++;
+            } else if (this.model.power.oilWell.val > this.model.power.oilWell.on && proVar > (conVar + 3)) {
+                this.model.power.oilWell.on++;
+                conVar++;
+            } else if (this.model.power.bioLab.val > this.model.power.bioLab.on && proVar > (conVar + 3)) {
+                this.model.power.bioLab.on++;
+                conVar++;
+            } else if (this.model.power.bioLab.on > 0 && proVar < conVar) {
+                this.model.power.bioLab.on--;
+                conVar--;
+            } else if (this.model.power.oilWell.on > 0 && proVar < conVar) {
+                this.model.power.oilWell.on--;
+                conVar--;
+            } else if (this.model.power.factory.on > 0 && proVar < conVar) {
+                this.model.power.factory.on--;
+                conVar--;
+            } else if (this.model.power.calciner.on > 0 && proVar < conVar) {
+                this.model.power.calciner.on--;
+                conVar--;
+            } else if (this.model.power.accelerator.on > 0 && proVar < conVar) {
+                this.model.power.accelerator.on--;
+                conVar--;
+            }
+        }
+        return false;
+    }
+
+    /*** These scripts run every 4 seconds ***/
+
+    // Auto assign new kittens to selected job
+    autoAssign(ticksPerCycle) {
+        if (this.model.auto.assign && game.village.getJob(this.model.option.assign).unlocked && game.village.hasFreeKittens()) {
+            game.village.assignJob(game.village.getJob(this.model.option.assign), 1);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // Auto Research
@@ -815,6 +813,167 @@ SK.Tasks = class {
         return bought;
     }
 
+    // Trade automatically
+    autoTrade(ticksPerCycle) {
+        var traded = false;
+        if (this.model.auto.trade) {
+            var goldResource = game.resPool.get('gold');
+            var goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
+            var powerResource = game.resPool.get('manpower');
+            var powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
+            var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
+            var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
+
+            if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
+                var tiRes = game.resPool.get('titanium');
+                var unoRes = game.resPool.get('unobtainium');
+
+                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && game.diplomacy.get('leviathans').duration != 0) {
+                    game.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
+                    traded = true;
+                } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
+                    // don't waste the iron, make some space for it.
+                    var ironRes = game.resPool.get('iron');
+                    var sellIron = game.diplomacy.get("zebras").sells[0];
+                    var expectedIron = sellIron.value * sellCount *
+                        (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
+                        (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
+                    if (ironRes.value > (ironRes.maxValue - expectedIron)) {
+                        game.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
+                    }
+
+                    // don't overdo it
+                    var deltaTi = tiRes.maxValue - tiRes.value;
+                    var expectedTi = game.resPool.get("ship").value * 0.03;
+                    sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
+                    game.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
+                    traded = true;
+                }
+            }
+        }
+        return traded;
+    }
+
+    // auxiliary function for autoShatter
+    autoDoShatter(years) {
+        // limit to 5 years per tick, mostly to allow crafting time
+        var timeslip = false;
+        if (years > 5) {
+            years = 5;
+            timeslip = true;
+        }
+
+        // mass craft
+        var shatterTCGain = game.getEffect("shatterTCGain") * (1 + game.getEffect("rrRatio"));
+        var cal = game.calendar;
+        var ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
+        this.autoCraft(shatterTCGain * ticksPassing);
+
+        // do shatter
+        var btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
+        btn.controller.doShatterAmt(btn.model, years);
+        return timeslip;
+    }
+
+    // Keep Shattering as long as Space-Time is cool enough
+    autoShatter(ticksPerCycle, shattering) {
+        var timeslip = false;
+        if (this.model.auto.shatter || this.model.auto.cycle) {
+            if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
+                var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
+                var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"));
+                var startStorm = shattering || (this.model.minor.wait4void ? startOfSeason : true) && lowHeat;
+
+                // find length of shatter storm
+                var shatter = 0;
+                if (this.model.auto.shatter && startStorm) {
+                    // how many shatters worth of heat can we afford?
+                    var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
+                    var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
+                }
+
+                // adjust to end in the right cycle
+                if (this.model.auto.cycle && game.calendar.cycle != this.model.option.cycle) {
+                    // desired cycle: sk.model.option.cycle
+                    // current cycle: game.calendar.cycle
+                    // year in cycle: game.calendar.cycleYear
+                    var deltaCycle = (this.model.option.cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+                    var yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
+                    shatter = Math.floor(shatter / 50)*50 + yearsToCycle;
+                }
+
+                // click the button
+                if (shatter != 0 && shatter < game.resPool.get('timeCrystal').value) {
+                    timeslip = this.autoDoShatter(shatter);
+                }
+            }
+        }
+        return timeslip;
+    }
+
+    // Build Embassies automatically
+    autoEmbassy(ticksPerCycle) {
+        var built = false;
+        if (this.model.auto.embassy && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
+            var culture = game.resPool.get('culture');
+            if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
+                var panels = game.diplomacyTab.racePanels;
+                var btn = panels[0].embassyButton;
+                for (var z = 1; z < panels.length; z++) {
+                    var candidate = panels[z].embassyButton;
+                    if (candidate && candidate.model.prices[0].val < btn.model.prices[0].val) {
+                        btn = candidate;
+                    }
+                }
+                btn.controller.buyItem(btn.model, {}, function(result) {
+                    if (result) {built = true; btn.update();}
+                });
+            }
+        }
+        return built;
+    }
+
+    /*** These scripts run every minute ***/
+
+    // Explore for new Civs
+    autoExplore(ticksPerCycle) {
+        var available = false;
+        if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
+            for (var race of game.diplomacy.races) {
+                if (race.unlocked) continue;
+                switch(race.name) {
+                    case 'lizards': case 'sharks': case 'griffins':
+                        available = true;
+                        break;
+                    case 'nagas':
+                        available = game.resPool.get("culture").value >= 1500;
+                        break;
+                    case 'zebras':
+                        available = game.resPool.get("ship").value >= 1;
+                        break;
+                    case 'spiders':
+                        available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
+                        break;
+                    case 'dragons':
+                        available = game.science.get("nuclearFission").researched;
+                        break;
+                    case 'leviathans':
+                        break;
+                    default:
+                        console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
+                }
+                if (available) break;
+            }
+            if (available && game.diplomacyTab.exploreBtn) {
+                var button = game.diplomacyTab.exploreBtn;
+                button.controller.buyItem(button.model, {}, function(result) {
+                    if (result) {built = true; button.update();}
+                });
+            }
+        }
+        return available;
+    }
+
     // Auto buy unicorn upgrades
     autoUnicorn(ticksPerCycle) {
         var acted = false;
@@ -890,131 +1049,6 @@ SK.Tasks = class {
         return acted;
     }
 
-    // Festival automatically
-    autoParty(ticksPerCycle) {
-        if (this.model.auto.party && game.science.get("drama").researched) {
-            var catpower = game.resPool.get('manpower').value;
-            var culture = game.resPool.get('culture').value;
-            var parchment = game.resPool.get('parchment').value;
-
-            if (catpower > 1500 && culture > 5000 && parchment > 2500) {
-                if (game.prestige.getPerk("carnivals").researched && game.calendar.festivalDays < 400*10) {
-                    game.village.holdFestival(1);
-                } else if (game.calendar.festivalDays == 0) {
-                    game.village.holdFestival(1);
-                }
-            }
-        }
-        return false; // there is never a need to re-run
-    }
-
-    // Auto assign new kittens to selected job
-    autoAssign(ticksPerCycle) {
-        if (this.model.auto.assign && game.village.getJob(this.model.option.assign).unlocked && game.village.hasFreeKittens()) {
-            game.village.assignJob(game.village.getJob(this.model.option.assign), 1);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    autoDoShatter(years) {
-        // limit to 5 years per tick, mostly to allow crafting time
-        var timeslip = false;
-        if (years > 5) {
-            years = 5;
-            timeslip = true;
-        }
-
-        // mass craft
-        var shatterTCGain = game.getEffect("shatterTCGain") * (1 + game.getEffect("rrRatio"));
-        var cal = game.calendar;
-        var ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
-        this.autoCraft(shatterTCGain * ticksPassing);
-
-        // do shatter
-        var btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
-        btn.controller.doShatterAmt(btn.model, years);
-        return timeslip;
-    }
-
-    // Keep Shattering as long as Space-Time is cool enough
-    autoShatter(ticksPerCycle, shattering) {
-        var timeslip = false;
-        if (this.model.auto.shatter || this.model.auto.cycle) {
-            if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
-                var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
-                var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"));
-                var startStorm = shattering || (this.model.minor.wait4void ? startOfSeason : true) && lowHeat;
-
-                // find length of shatter storm
-                var shatter = 0;
-                if (this.model.auto.shatter && startStorm) {
-                    // how many shatters worth of heat can we afford?
-                    var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
-                    var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
-                }
-
-                // adjust to end in the right cycle
-                if (this.model.auto.cycle && game.calendar.cycle != this.model.option.cycle) {
-                    // desired cycle: sk.model.option.cycle
-                    // current cycle: game.calendar.cycle
-                    // year in cycle: game.calendar.cycleYear
-                    var deltaCycle = (this.model.option.cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
-                    var yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
-                    shatter = Math.floor(shatter / 50)*50 + yearsToCycle;
-                }
-
-                // click the button
-                if (shatter != 0 && shatter < game.resPool.get('timeCrystal').value) {
-                    timeslip = this.autoDoShatter(shatter);
-                }
-            }
-        }
-        return timeslip;
-    }
-
-    // Control Energy Consumption
-    energyControl(ticksPerCycle) {
-        if (this.model.auto.energy) {
-            var proVar = game.resPool.energyProd;
-            var conVar = game.resPool.energyCons;
-
-            if (this.model.power.accelerator.val > this.model.power.accelerator.on && proVar > (conVar + 3)) {
-                this.model.power.accelerator.on++;
-                conVar++;
-            } else if (this.model.power.calciner.val > this.model.power.calciner.on && proVar > (conVar + 3)) {
-                this.model.power.calciner.on++;
-                conVar++;
-            } else if (this.model.power.factory.val > this.model.power.factory.on && proVar > (conVar + 3)) {
-                this.model.power.factory.on++;
-                conVar++;
-            } else if (this.model.power.oilWell.val > this.model.power.oilWell.on && proVar > (conVar + 3)) {
-                this.model.power.oilWell.on++;
-                conVar++;
-            } else if (this.model.power.bioLab.val > this.model.power.bioLab.on && proVar > (conVar + 3)) {
-                this.model.power.bioLab.on++;
-                conVar++;
-            } else if (this.model.power.bioLab.on > 0 && proVar < conVar) {
-                this.model.power.bioLab.on--;
-                conVar--;
-            } else if (this.model.power.oilWell.on > 0 && proVar < conVar) {
-                this.model.power.oilWell.on--;
-                conVar--;
-            } else if (this.model.power.factory.on > 0 && proVar < conVar) {
-                this.model.power.factory.on--;
-                conVar--;
-            } else if (this.model.power.calciner.on > 0 && proVar < conVar) {
-                this.model.power.calciner.on--;
-                conVar--;
-            } else if (this.model.power.accelerator.on > 0 && proVar < conVar) {
-                this.model.power.accelerator.on--;
-                conVar--;
-            }
-        }
-        return false;
-    }
-
     // Auto buys and sells bcoins optimally (not yet tested)
     autoBCoin(ticksPerCycle) {
         if (this.model.auto.bcoin && game.science.get("antimatter").researched) {
@@ -1027,28 +1061,6 @@ SK.Tasks = class {
             }
         }
         return false;
-    }
-
-    autoNip(ticksPerCycle) {
-        if (this.model.auto.build && game.bld.get('field').val < 20) {
-            $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger("click");
-        }
-        if (this.model.auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
-            if (game.bldTab.buttons[1].model.enabled) {
-                $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger("click");
-            }
-        }
-        return false;
-    }
-
-    listScripts() {
-        return [
-            {name:'test',        label:'Test Script'},
-            {name:'startup',     label:'Post Chrono Setup'},
-            {name:'fastParagon', label:'Fast Reset'},
-            {name:'chronoloop',  label:'Chrono Reset'},
-            {name:'hoglagame',   label:'Hoglagame'},
-        ];
     }
 }
 
