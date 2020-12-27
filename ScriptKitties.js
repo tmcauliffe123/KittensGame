@@ -162,7 +162,7 @@ SK.Gui = class {
 
         // Auto Craft Books drop-down
         var bookDropdown = '<select id="SK_bookChoice" style="{{grid}}" onchange="sk.model.option.bookChoice=this.value;">';
-        bookDropdown += '<option value="none" selected="selected">None</option>';
+        bookDropdown += '<option value="default" selected="selected">Default</option>';
         for (var book of this.model.books) {
             var label = game.resPool.get(book).title;
             var label = label[0].toUpperCase() + label.slice(1);
@@ -180,6 +180,14 @@ SK.Gui = class {
         }
         cycleDropdown += '</select>';
 
+        // Auto Scripts drop-down
+        var scriptDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="sk.model.option.script=this.value;">';
+        scriptDropdown += '<option value="none" selected="selected">None</option>';
+        for (var s of this.tasks.listScripts()) {
+            scriptDropdown += `<option value="${s.name}">${s.label}</option>`;
+        }
+        scriptDropdown += '</select>';
+
         var grid = [ // Grid Layout
             [this.autoButton('Kill Switch', 'sk.clearScript()')],
             [this.autoButton('Check Efficiency', 'sk.task.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
@@ -193,13 +201,17 @@ SK.Gui = class {
                 + `</span>`
             ],
             ['<span style="height:10px;{{grid}}"></span>'],
+
             [this.autoSwitchButton('Auto Hunt', 'hunt'), this.autoSwitchButton('Auto Praise', 'praise')],
             [this.autoSwitchButton('Auto Trade', 'trade'), this.autoSwitchButton('Auto Embassy', 'embassy')],
             [this.autoSwitchButton('Auto Party', 'party'), this.autoSwitchButton('Auto Explore', 'explore')],
             ['<span style="height:10px;{{grid}}"></span>'],
+
             [this.autoSwitchButton('Auto Cycle', 'cycle'), cycleDropdown],
             [this.autoSwitchButton('Shatterstorm', 'shatter'), this.autoSwitchButton('Auto BCoin', 'bcoin')],
+            [this.autoSwitchButton('Scripts', 'script'), scriptDropdown],
             ['<span style="height:10px;{{grid}}"></span>'],
+
             [this.autoSwitchButton('Auto Science', 'research'), this.autoSwitchButton('Auto Upgrade', 'workshop')],
             [this.autoSwitchButton('Auto Religion', 'religion'), this.autoSwitchButton('Auto Unicorn', 'unicorn')],
             [this.autoSwitchButton('Energy Control', 'energy')],
@@ -683,7 +695,7 @@ SK.Tasks = class {
                         } else {
                             craftCount = 0;
                         }
-                    } else if (this.model.books.includes(output)) {
+                    } else if (this.model.books.includes(output) && this.model.option.bookChoice != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
                         var outputIndex = this.model.books.indexOf(output);
                         var choiceIndex = this.model.books.indexOf(this.model.option.bookChoice);
@@ -796,7 +808,7 @@ SK.Tasks = class {
             }
             var faith = game.resPool.get('faith');
             if (this.model.minor.religion2praise && bought == false && faith.value >= faith.maxValue) {
-                this.autoSwitch('praise', 'SK_autoPraise');
+                sk.gui.autoSwitch('praise', 'SK_autoPraise');
                 this.model.auto.praise = true;
             }
         }
@@ -1028,7 +1040,22 @@ SK.Tasks = class {
         }
         return false;
     }
+
+    listScripts() {
+        return [
+            {name:'test',        label:'Test Script'},
+            {name:'startup',     label:'Post Chrono Setup'},
+            {name:'fastParagon', label:'Fast Reset'},
+            {name:'chronoloop',  label:'Chrono Reset'},
+            {name:'hoglagame',   label:'Hoglagame'},
+        ];
+    }
 }
 
-var sk = new SK();
+var sk;
+if (game && game.bld) {
+    sk = new SK();
+} else {
+    dojo.subscribe("game/start", function(){ sk = new SK()});
+}
 
