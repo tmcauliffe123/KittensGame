@@ -190,7 +190,7 @@ SK.Gui = class {
 
         var grid = [ // Grid Layout
             [this.autoButton('Kill Switch', 'sk.clearScript()')],
-            [this.autoButton('Check Efficiency', 'sk.task.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
+            [this.autoButton('Check Efficiency', 'sk.tasks.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
             [this.autoSwitchButton('Auto Build', 'build'), this.autoButton('Select Building', '$(\'#SK_buildingOptions\').toggle();')],
             [this.autoSwitchButton('Auto Assign', 'assign'), workerDropdown],
             [this.autoSwitchButton('Auto Craft', 'craft'), bookDropdown],
@@ -607,7 +607,7 @@ SK.Tasks = class {
             }
 
             // Build space programs
-            if (this.model.option.program && game.spaceTab && game.spaceTab.GCPanel) {
+            if (this.model.minor.program && game.spaceTab && game.spaceTab.GCPanel) {
                 var spcProg = game.spaceTab.GCPanel.children;
                 for (var i = 0; i < spcProg.length; i++) {
                     if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
@@ -967,7 +967,7 @@ SK.Tasks = class {
             if (available && game.diplomacyTab.exploreBtn) {
                 var button = game.diplomacyTab.exploreBtn;
                 button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {built = true; button.update();}
+                    if (result) {available = true; button.update();}
                 });
             }
         }
