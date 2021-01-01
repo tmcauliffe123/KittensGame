@@ -3,6 +3,7 @@ SK = class {
     constructor() {
         this.model = new SK.Model();
         this.tasks = new SK.Tasks(this.model);
+        this.scripts = new SK.Scripts(this.model);
         this.gui = new SK.Gui(this.model, this.tasks);
     }
 
@@ -42,8 +43,8 @@ SK.Model = class {
         // These are the assorted variables
         this.books = ['parchment', 'manuscript', 'compedium', 'blueprint'];
         this.option = {
-            bookChoice:'none',
-            assign:'farmer',
+            bookChoice:'default',
+            assign:'smart',
             cycle:0,
             minSecResRatio:1,
             maxSecResRatio:25,
@@ -157,6 +158,7 @@ SK.Gui = class {
     generateMenu() {
         // Auto Assign drop-down
         var workerDropdown = '<select id="SK_assignChoice" style="{{grid}}" onclick="sk.model.option.assign=this.value;">';
+        workerDropdown += '<option value="smart" selected="selected">Smart</option>';
         game.village.jobs.forEach(job => { workerDropdown += `<option value="${job.name}">${job.title}</option>`; });
         workerDropdown += '</select>';
 
@@ -183,7 +185,7 @@ SK.Gui = class {
         // Auto Scripts drop-down
         var scriptDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="sk.model.option.script=this.value;">';
         scriptDropdown += '<option value="none" selected="selected">None</option>';
-        for (var s of this.tasks.listScripts()) {
+        for (var s of SK.Scripts.listScripts()) {
             scriptDropdown += `<option value="${s.name}">${s.label}</option>`;
         }
         scriptDropdown += '</select>';
@@ -243,7 +245,7 @@ SK.Gui = class {
 
     generateBuildingMenu() {
         var menu = '';
-        menu += '<div id="SK_buildingOptions" class="dialog help" style="border: 1px solid gray; display:none; margin-top:-333px;">';
+        menu += '<div id="SK_buildingOptions" class="dialog help" style="border: 1px solid gray; display:none; margin-top:-333px; margin-left:-200px;">';
         menu +=   '<a href="#" onclick="$(\'#SK_buildingOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
         menu +=   '<div class="tabsContainer">';
         menu +=     '<a href="#" id="SK_cathTab" class="tab" onclick="sk.gui.switchTab(\'cath\')" style="white-space: nowrap;">Cath</a>';
@@ -358,7 +360,7 @@ SK.Tasks = class {
             {fn:'autoPraise',   interval:1,  offset:0,   override:false},
             {fn:'autoBuild',    interval:1,  offset:0,   override:false},
 
-            // every 0.6 seconds
+            // every 3 ticks == 0.6 seconds
             {fn:'autoCraft',    interval:3,  offset:0,   override:false},
             {fn:'autoMinor',    interval:3,  offset:1,   override:false},
             {fn:'autoHunt',     interval:3,  offset:2,   override:false},
@@ -408,16 +410,6 @@ SK.Tasks = class {
         var numberKittens = game.resPool.get('kittens').value;
         var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
         game.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
-    }
-
-    listScripts() {
-        return [
-            {name:'test',        label:'Test Script'},
-            {name:'startup',     label:'Post Chrono Setup'},
-            {name:'fastParagon', label:'Fast Reset'},
-            {name:'chronoloop',  label:'Chrono Reset'},
-            {name:'hoglagame',   label:'Hoglagame'},
-        ];
     }
 
     /*** Individual Auto Scripts start here ***/
@@ -488,13 +480,16 @@ SK.Tasks = class {
                 var output = res.name;
                 var inputs = res.prices;
                 var outRes = game.resPool.get(output);
-                if (! outRes.unlocked) continue;
+                if (! res.unlocked) continue;
+                if (outRes.type != 'common') continue; // mostly to prevent relic+tc->bloodstone
 
                 var craftCount = Infinity;
                 var minimumReserve = Infinity;
                 for (var input of inputs) {
                     var inRes = game.resPool.get(input.name);
-                    craftCount = Math.min(craftCount, Math.floor(inRes.value / input.val)); // never try to use more than we have
+                    var outVal = outRes.value / game.getCraftRatio(outRes.tag);
+                    var inVal = inRes.value / input.val;
+                    craftCount = Math.min(craftCount, Math.floor(inVal); // never try to use more than we have
 
                     if (inRes.maxValue != 0) {
                         // primary resource
@@ -509,23 +504,26 @@ SK.Tasks = class {
                         var outputIndex = this.model.books.indexOf(output);
                         var choiceIndex = this.model.books.indexOf(this.model.option.bookChoice);
                         if (outputIndex <= choiceIndex) {
-                            craftCount = Math.min(craftCount, (inRes.value / input.val));
+                            craftCount = Math.min(craftCount, (inVal));
                         } else {
                             craftCount = 0;
                         }
                     } else {
                         // secondary resource: general
-                        var resMath = inRes.value / input.val;
-                        if (resMath <= 1 || outRes.value > (inRes.value * (this.model.option.maxSecResRatio / 100))) craftCount = 0;
-                        craftCount = Math.min(craftCount, resMath * (this.model.option.maxSecResRatio / 100));
+                        var inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
+                        if (outVal > inMSRR) {
+                            craftCount = 0;
+                        } else {
+                            craftCount = Math.min(craftCount, inMSRR - outVal);
+                        }
                     }
                     // for when our capacity gets large compared to production
-                    minimumReserve = Math.min(minimumReserve, (inRes.value / input.val) * (this.model.option.minSecResRatio / 100) - outRes.value / game.getEffect('craftRatio'));
+                    minimumReserve = Math.min(minimumReserve, inVal * (this.model.option.minSecResRatio / 100) - outVal);
                 }
 
                 craftCount = Math.max(craftCount, minimumReserve);
                 if (craftCount == 0 || craftCount == Infinity) {
-                    // nothing to do
+                    // nothing to do, or no reason to act
                 } else if (this.model.option.bookChoice == 'blueprint' && output == 'compedium' && game.resPool.get('compedium').value > 25) {
                     // save science for making blueprints
                 } else {
@@ -717,12 +715,90 @@ SK.Tasks = class {
 
     // Auto assign new kittens to selected job
     autoAssign(ticksPerCycle) {
-        if (this.model.auto.assign && game.village.getJob(this.model.option.assign).unlocked && game.village.hasFreeKittens()) {
-            game.village.assignJob(game.village.getJob(this.model.option.assign), 1);
-            return true;
-        } else {
-            return false;
+        var assigned = false;
+        if (this.model.auto.assign) {
+            if (this.model.option.assign == 'smart') {
+                if (game.calendar.day < 0) return false;
+                var limits={};
+                var spaces={};
+                var priestJob;
+                var kittens = game.village.getKittens();
+                var fugit = game.time.isAccelerated ? 1.5 : 1;
+
+                // first calculate (and enforce) limits:
+                for (var job of game.village.jobs) {
+                    var res = null;
+                    var ticksToFull = null;
+                    switch(job.name) {
+                        case 'woodcutter':
+                            res = game.resPool.get('wood');
+                            ticksToFull = 3; // Limit production to what autoCraft can consume
+                            break;
+                        case 'farmer':
+                            limits[job.name] = Math.min(5, Math.floor(kittens/100));
+                            break;
+                        case 'scholar':
+                            res = game.resPool.get('science');
+                            ticksToFull = 20;
+                            break;
+                        case 'hunter':
+                            res = game.resPool.get('manpower');
+                            ticksToFull = 10;
+                            break;
+                        case 'miner':
+                            res = game.resPool.get('minerals');
+                            ticksToFull = 3; // As Lumbercats
+                            break;
+                        case 'priest':
+                            priestJob = job;
+                        case 'geologist':
+                            var ironPerTick = game.resPool.get('iron').perTickCached;
+                            var coalPerTick = game.resPool.get('coal').perTickCached;
+                            limits[job.name] = Math.round((ironPerTick * (2 / 3) / coalPerTick) * job.value);
+                            break;
+                    }
+                    if (res && ticksToFull) {
+                        var perKittenSec = res.perTickCached * fugit * 5 / job.value;
+                        limits[job.name] = Math.round((res.maxValue / perKittenSec) / (ticksToFull / 5));
+                    }
+                    if (limits[job.name] && job.value > limits[job.name]) {
+                        game.village.sim.removeJob(job.name, job.value - limits[job.name]);
+                        spaces[job.name] = 0;
+                    } else if (limits[job.name]) {
+                        spaces[job.name] = limits[job.name] - job.value;
+                    }
+                }
+
+                // free up Priests to take useful employment
+                var avails = game.village.getFreeKittens();
+                var reqs = 0; for (var name in spaces) { reqs += spaces[name]; }
+                if (reqs > avails && priestJob.value > 1) {
+                    // never remove last priest
+                    game.village.sim.removeJob(priestJob.name, Math.min(reqs - avails, priestJob.value - 1));
+                    avails = game.village.getFreeKittens();
+                }
+
+                // add kittens:
+                for (var job of game.village.jobs) {
+                    var space = spaces[job.name];
+                    if (job.name != 'engineer' && job.value == 0) {
+                        game.village.assignJob(job, 1); // algorithm needs at least one
+                    } else if (space) {
+                        game.village.assignJob(job, Math.round(space * Math.min(avails/reqs, 1)));
+                    }
+                }
+
+                // remainder go Priest
+                game.village.assignJob(priestJob, game.village.getFreeKittens());
+                // we do everything in one pass, no need for repeat
+                assigned = false;
+
+            } else if (game.village.getJob(this.model.option.assign).unlocked && game.village.hasFreeKittens()) {
+                game.village.assignJob(game.village.getJob(this.model.option.assign), 1);
+                assigned = true;
+            }
         }
+        return assigned;
     }
 
     // Auto Research
@@ -952,7 +1028,7 @@ SK.Tasks = class {
                         available = game.resPool.get("ship").value >= 1;
                         break;
                     case 'spiders':
-                        available = Pool.get("ship").value >= 100 && this.game.resPool.get("science").maxValue > 125000;
+                        available = game.resPool.get("ship").value >= 100 && game.resPool.get("science").maxValue > 125000;
                         break;
                     case 'dragons':
                         available = game.science.get("nuclearFission").researched;
@@ -1064,10 +1140,128 @@ SK.Tasks = class {
     }
 }
 
+SK.Scripts = class {
+    constructor(model) {
+        this.model = model;
+    }
+
+    static listScripts() {
+        return [
+            {name:'test',        label:'Test Script'},
+            {name:'startup',     label:'Post Chrono Setup'},
+            {name:'fastParagon', label:'Fast Reset'},
+            {name:'chronoloop',  label:'Chrono Reset'},
+            {name:'hoglagame',   label:'Hoglagame'},
+        ];
+    }
+
+    startup() {
+        switch (pants) {
+            case 0:
+                // buy a workshop
+                var oldTab = game.ui.activeTabId;
+                game.ui.activeTabId = 'Science'; game.render();
+                game.ui.activeTabId = 'Workshop'; game.render();
+                game.ui.activeTabId = oldTab; game.render();
+                this.model.auto.research = true;
+                this.model.auto.workshop = true;
+                this.model.minor.conserveRare = false; // TODO: we don't want Blackchain, IBH
+                break;
+            case 1:
+                // * wait for tech/upgrade buy
+                // upgrade all buildings
+                // select all buildings except AI Core, Zebras
+                this.model.auto.build = true;
+
+                // select space: Redmoon/Dune/Sun{lifter,forge}
+                var oldTab = game.ui.activeTabId;
+                game.ui.activeTabId = 'Space'; game.render();
+                game.ui.activeTabId = oldTab; game.render();
+                this.model.minor.program = true;
+
+                // people
+                // XXX: assign leader to priest
+                this.model.option.assign = 'smart';
+                this.model.auto.assign = true;
+                this.model.auto.party = true;
+                this.model.minor.feed = true;
+                this.model.minor.promote = true;
+
+                // start unicorn
+                this.model.auto.hunt = true;
+
+                // todo: turn on steamworks
+                break;
+
+            case 2:
+                // * wait 200 ticks for mass building buy
+                // unselect Library/Obs/Warehouse/Harbour/Quarry/Oil Well/Zig
+                this.model.auto.craft = true;
+
+                var oldTab = game.ui.activeTabId;
+                game.ui.activeTabId = 'Religion'; game.render();
+                game.ui.activeTabId = oldTab; game.render();
+                // buy solar revolution
+                this.model.auto.religion = true;
+
+                // start working on the religion side
+                this.model.auto.unicorn = true;
+                break;
+
+            case 2:
+                // policies
+
+                this.model.option.cycle = 5;
+        }
+    }
+
+    fastParagon() {
+        /*
+        https://www.reddit.com/r/kittensgame/comments/hu8n43/late_game_short_runs_for_maximum_paragon_grinding/
+        * This is a good guide, but needs heavy customization
+        * Key: trading with Zebras for Steel->Plates
+        * Most of the time is spent waiting for kittens to arrive
+
+    My Plan:
+        * Never: Mint, Ziggurat, Chronosphere (until end)
+        * 10 each of four basic buildings
+        * Auto Science, Auto Upgrade
+        * Chapels or Temples, Solar Revolution, Praise, Auto Religion
+        * 10 each of all buildings, max: Workshops, Lumber Mill, Smelter, Mine
+        * Space, Moon, Dune. 10 each of Satellites, Elevators
+        * Max everything, except 50 of: Observatory, Bio Lab, Warehouse, Harbour, Quarry, Oil Well
+
+    Alternate Plan:
+        * 1 chrono just to overcome early bottlenecks
+        - ton of workshops, temple theology, SR
+        - space, piscine, satellite
+        - max out mansions/log houses/space stations while waiting for 2500 UO->CS
+
+    Plan:Year 1:
+        - enable all Cath buildings except Zebra, Mega, Mint
+        - minor: program, feed, promote, praise after, disable conserve
+        - enable technology/upgrade
+        - manual SR -> auto religion
+        -
+        */
+    }
+
+    todo() {
+        // TODO
+        // 1. script settings save/load
+        // 2. disable [auto.script] on script change
+        // 4. better book distribution on "default"
+        // 5.
+    }
+
+}
+
 var sk;
 if (game && game.bld) {
     sk = new SK();
-} else {
+} else { // we were loaded before the game was, wait for it.
     dojo.subscribe("game/start", function(){ sk = new SK()});
 }
 
+// XXX this is how to
+LCstorage["net.sagefault.scriptkittens.state"];
