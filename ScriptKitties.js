@@ -489,7 +489,7 @@ SK.Tasks = class {
                     var inRes = game.resPool.get(input.name);
                     var outVal = outRes.value / game.getCraftRatio(outRes.tag);
                     var inVal = inRes.value / input.val;
-                    craftCount = Math.min(craftCount, Math.floor(inVal); // never try to use more than we have
+                    craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
 
                     if (inRes.maxValue != 0) {
                         // primary resource
@@ -501,13 +501,7 @@ SK.Tasks = class {
                         }
                     } else if (this.model.books.includes(output) && this.model.option.bookChoice != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
-                        var outputIndex = this.model.books.indexOf(output);
-                        var choiceIndex = this.model.books.indexOf(this.model.option.bookChoice);
-                        if (outputIndex <= choiceIndex) {
-                            craftCount = Math.min(craftCount, (inVal));
-                        } else {
-                            craftCount = 0;
-                        }
+                        if (outputIndex > choiceIndex) craftCount = 0;
                     } else {
                         // secondary resource: general
                         var inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
