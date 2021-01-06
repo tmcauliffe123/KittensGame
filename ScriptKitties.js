@@ -289,6 +289,41 @@ SK.Gui = class {
         }
     }
 
+    generateBuildingPane(groups, elementsName) {
+        var menu = '';
+        menu += `<div id="SK_${elementsName}Pane" style="display:none; columns:2; column-gap:20px;">\n`;
+        var tab = elementsName.substring(0,4); // tab prefix
+        menu += `<input type="checkbox" id="SK_${tab}TabChecker" onchange="sk.gui.selectChildren('SK_${tab}TabChecker','SK_${tab}Check');">`;
+        menu += `<label for="SK_${tab}TabChecker">SELECT ALL</label><br>\n`;
+        for (var group of groups) {
+            var label = group[0];
+            var lab = label.substring(0,3); // used for prefixes, "lab" is prefix of "label"
+            menu += '<p style="break-inside: avoid;">'; // we want grouping to avoid widows/orphans
+            menu += `<input type="checkbox" id="SK_${lab}Checker" class="SK_${tab}Check" onchange="sk.gui.selectChildren('SK_${lab}Checker','SK_${lab}Check');">`;
+            menu += `<label for="SK_${lab}Checker"><b>${label}</b></label><br>\n`;
+
+            for (var j = 0; j < group[1].length; j++) {
+                var bld = group[1][j];
+                var bldLabel = this.model[elementsName][bld].name;
+                menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.model.${elementsName}.${bld}.enabled=this.checked">`;
+                menu += `<label style="padding-left:10px;" for="SK_${bld}">${bldLabel}</label><br>\n`;
+            }
+            menu += '</p>\n';
+        }
+        menu += '</div>\n';
+        return menu;
+    }
+
+    selectChildren(checker, checkee) {
+        $('.'+checkee).prop('checked', document.getElementById(checker).checked).change();
+    }
+
+    autoSwitch(id, element) {
+        this.model.auto[id] = !this.model.auto[id];
+        game.msg(`${element} is now  ${(this.model.auto[id] ? 'on' : 'off')}`);
+        $(`#${element}`).toggleClass('disabled', !this.model.auto[id]);
+    }
+
     autoButton(label, script, id=null) {
         var cssClass = 'btn nosel modern';
         if (id) cssClass += ' disabled';
@@ -303,44 +338,6 @@ SK.Gui = class {
         return this.autoButton(label, script, element);
     }
 
-    generateBuildingPane(groups, elementsName) {
-        var menu = '';
-        menu += `<div id="SK_${elementsName}Pane" style="display:none; columns:2; column-gap:20px;">\n`;
-        var tab = elementsName.substring(0,4); // tab prefix
-        menu += `<input type="checkbox" id="SK_${tab}TabChecker" onchange="sk.gui.selectChildren('SK_${tab}TabChecker','SK_${tab}Check');">`;
-        menu += `<label for="SK_${tab}TabChecker">SELECT ALL</label><br>\n`;
-        for (var i = 0; i < groups.length; i++)  {
-            var label = groups[i][0];
-            var lab = label.substring(0,3); // used for prefixes, "lab" is prefix of "label"
-            menu += '<p style="break-inside: avoid;">'; // we want grouping to avoid widows/orphans
-            menu += `<input type="checkbox" id="SK_${lab}Checker" class="SK_${tab}Check" onchange="sk.gui.selectChildren('SK_${lab}Checker','SK_${lab}Check');">`;
-            menu += `<label for="SK_${lab}Checker"><b>${label}</b></label><br>\n`;
-
-            for (var j = 0; j < groups[i][1].length; j++) {
-                var bld = groups[i][1][j];
-                var bldLabel = this.model[elementsName][bld].name;
-                menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.gui.verifyElementSelected(sk.model.${elementsName},\'${bld}\',this.checked)">`;
-                menu += `<label style="padding-left:10px;" for="SK_${bld}">${bldLabel}</label><br>\n`;
-            }
-            menu += '</p>\n';
-        }
-        menu += '</div>\n';
-        return menu;
-    }
-
-    selectChildren(checker, checkee) {
-        $('.'+checkee).prop('checked', document.getElementById(checker).checked).change();
-    }
-
-    verifyElementSelected(elements, id, checked) {
-        elements[id].enabled = checked;
-    }
-
-    autoSwitch(id, element) {
-        this.model.auto[id] = !this.model.auto[id];
-        game.msg(`${element} is now  ${(this.model.auto[id] ? 'on' : 'off')}`);
-        $(`#${element}`).toggleClass('disabled', !this.model.auto[id]);
-    }
 }
 
 /**
@@ -441,13 +438,12 @@ SK.Tasks = class {
     autoBuild(ticksPerCycle) {
         var built = false;
         if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
-            var buttons = game.bldTab.buttons;
-
-            for (var i = 2; i < buttons.length; i++) {
-                var name = buttons[i].model.metadata.name;
-                if (buttons[i].model.enabled && this.model.cathBuildings[name].enabled) {
-                    buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
-                        if (result) {built = true; buttons[i].update();}
+            for (var button of game.bldTab.buttons) {
+                if (! button.model.metadata) continue;
+                var name = button.model.metadata.name;
+                if (button.model.enabled && this.model.cathBuildings[name].enabled) {
+                    button.controller.buyItem(button.model, {}, function(result) {
+                        if (result) {built = true; button.update();}
                     });
                 }
             }
@@ -585,9 +581,8 @@ SK.Tasks = class {
         var built = false;
         if (this.model.auto.build && game.spaceTab && game.spaceTab.planetPanels) {
             // Build space buildings
-            for (var i = 0; i < game.spaceTab.planetPanels.length; i++) {
-                for (var j = 0; j < game.spaceTab.planetPanels[i].children.length; j++) {
-                    var spBuild = game.spaceTab.planetPanels[i].children[j];
+            for (var planet of game.spaceTab.planetPanels) {
+                for (var spBuild of planet.children) {
                     if (this.model.spaceBuildings[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked) {
                         // .enabled doesn't update automatically unless the tab is active, force it
                         if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
@@ -603,13 +598,12 @@ SK.Tasks = class {
 
         // Build space programs
         if (this.model.minor.program && game.spaceTab && game.spaceTab.GCPanel) {
-            var spcProg = game.spaceTab.GCPanel.children;
-            for (var i = 0; i < spcProg.length; i++) {
-                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
-                    if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
-                    if (spcProg[i].model.enabled) {
-                        spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-                            if (result) {built = true; spcProg[i].update();}
+            for (var program of game.spaceTab.GCPanel.children) {
+                if (program.model.metadata.unlocked && program.model.on == 0) {
+                    if (! program.model.enabled) program.controller.updateEnabled(program.model);
+                    if (program.model.enabled) {
+                        program.controller.buyItem(program.model, {}, function(result) {
+                            if (result) {built = true; program.update();}
                         });
                     }
                 }
@@ -632,8 +626,7 @@ SK.Tasks = class {
 
             for (var buttons of buttonGroups) {
                 if (buttons) {
-                    for (var i = 0; i < buttons.length; i++) {
-                        var button = buttons[i];
+                    for (var button of buttons) {
                         if (this.model.timeBuildings[button.id]?.enabled && button.model.metadata.unlocked) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
@@ -866,13 +859,12 @@ SK.Tasks = class {
     autoReligion(ticksPerCycle) {
         var bought = false;
         if (this.model.auto.religion && game.religionTab.visible) {
-            var buttons = game.religionTab.rUpgradeButtons;
-            for (var i = 0; i < buttons.length; i++) {
-                if (buttons[i].model.visible && buttons[i].model.metadata.researched != true) {
-                    if ( ! buttons[i].model.enabled) buttons[i].update();
-                    if (buttons[i].model.enabled) {
-                        buttons[i].controller.buyItem(buttons[i].model, {}, function(result) {
-                            if (result) { bought = true; buttons[i].update(); }
+            for (var button of game.religionTab.rUpgradeButtons) {
+                if (button.model.visible && button.model.metadata.researched != true) {
+                    if ( ! button.model.enabled) button.update();
+                    if (button.model.enabled) {
+                        button.controller.buyItem(button.model, {}, function(result) {
+                            if (result) { bought = true; button.update(); }
                         });
                     }
                 }
@@ -1063,26 +1055,25 @@ SK.Tasks = class {
             var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect('ivoryMeteorRatio'));
 
             // find which is the best value
-            var buttons = game.religionTab.zgUpgradeButtons;
             var bestButton = null;
             var bestValue = 0.0;
-            for (var i = 0; i < buttons.length; i++) {
-                if (buttons[i].model.metadata.unlocked) {
+            for (var button of game.religionTab.zgUpgradeButtons) {
+                if (button.model.metadata.unlocked) {
                     if (! this.model.minor.unicornIvory) {
-                        var tearCost = buttons[i].model.prices.find(function(element){return element.name==='tears'});
+                        var tearCost = button.model.prices.find(function(element){return element.name==='tears'});
                         if (tearCost == null) continue;
-                        var ratio = buttons[i].model.metadata.effects.unicornsRatioReligion;
-                        var rifts = buttons[i].model.metadata.effects.riftChance || 0;
+                        var ratio = button.model.metadata.effects.unicornsRatioReligion;
+                        var rifts = button.model.metadata.effects.riftChance || 0;
                         var value = (ratio * ups + rifts * upsprc) / tearCost.val;
                     } else {
-                        var ivoryCost = buttons[i].model.prices.find(function(element){return element.name==='ivory'});
+                        var ivoryCost = button.model.prices.find(function(element){return element.name==='ivory'});
                         if (ivoryCost == null) continue;
-                        var ratio = buttons[i].model.metadata.effects.ivoryMeteorRatio || 0;
-                        var chance = buttons[i].model.metadata.effects.ivoryMeteorChance || 0;
+                        var ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
+                        var chance = button.model.metadata.effects.ivoryMeteorChance || 0;
                         value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
                     }
                     if (value > bestValue) {
-                        bestButton = buttons[i];
+                        bestButton = button;
                         bestValue = value;
                     }
                 }
