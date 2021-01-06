@@ -35,7 +35,7 @@ SK.Model = class {
             feed:"Auto Feed Elders",
             promote:"Auto Promote Leader",
             wait4void:"Only Shatter at Season Start",
-            religion2praise:"Praise After Religion",
+            praiseAfter:"Praise After Religion",
             unicornIvory:"Unicorn Ivory Optimization",
             conserveRare:"Conserve Rare Resources",
         };
@@ -45,7 +45,7 @@ SK.Model = class {
         this.option = {
             bookChoice:'default',
             assign:'smart',
-            cycle:0,
+            cycle:5, // redmoon
             minSecResRatio:1,
             maxSecResRatio:25,
         };
@@ -53,9 +53,10 @@ SK.Model = class {
         // These will allow quick selection of the buildings which consume energy
         this.power = {};
         for (var b of ["biolab", "oilWell", "factory", "calciner", "accelerator"]) {
-            this.power[b] = game.bld.getBuildingExt(b).meta;
+            this.power[b] = game.bld.get(b);
         }
 
+        // Note: per game: uncommon==luxuries==(trade goods), rare==unicorns+karma, exotic==relics+void+bc+bs
         this.rareResources = [
             "antimatter",
             "blackcoin",
@@ -65,6 +66,7 @@ SK.Model = class {
             "timeCrystal",
             "unobtainium",
             "void",
+            "bloodstone",
         ];
 
         this.populateDataStructures();
@@ -73,7 +75,7 @@ SK.Model = class {
     wipe() {
         this.auto = {}; // wipe fields
         this.minor = {};
-        this.options = {};
+        this.option = {};
     }
 
     populateDataStructures() {
@@ -430,7 +432,7 @@ SK.Tasks = class {
 
     // Auto praise the sun
     autoPraise(ticksPerCycle) {
-        if (this.model.auto.praise && game.bld.getBuildingExt('temple').meta.val > 0) {
+        if (this.model.auto.praise && game.bld.get('temple').val > 0) {
             game.religion.praise();
         }
     }
@@ -597,22 +599,23 @@ SK.Tasks = class {
                     }
                 }
             }
+        }
 
-            // Build space programs
-            if (this.model.minor.program && game.spaceTab && game.spaceTab.GCPanel) {
-                var spcProg = game.spaceTab.GCPanel.children;
-                for (var i = 0; i < spcProg.length; i++) {
-                    if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
-                        if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
-                        if (spcProg[i].model.enabled) {
-                            spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
-                                if (result) {built = true; spcProg[i].update();}
-                            });
-                        }
+        // Build space programs
+        if (this.model.minor.program && game.spaceTab && game.spaceTab.GCPanel) {
+            var spcProg = game.spaceTab.GCPanel.children;
+            for (var i = 0; i < spcProg.length; i++) {
+                if (spcProg[i].model.metadata.unlocked && spcProg[i].model.on == 0) {
+                    if (! spcProg[i].model.enabled) spcProg[i].controller.updateEnabled(spcProg[i].model);
+                    if (spcProg[i].model.enabled) {
+                        spcProg[i].controller.buyItem(spcProg[i].model, {}, function(result) {
+                            if (result) {built = true; spcProg[i].update();}
+                        });
                     }
                 }
             }
         }
+
         return built;
     }
 
@@ -875,9 +878,8 @@ SK.Tasks = class {
                 }
             }
             var faith = game.resPool.get('faith');
-            if (this.model.minor.religion2praise && bought == false && faith.value >= faith.maxValue) {
-                sk.gui.autoSwitch('praise', 'SK_autoPraise');
-                this.model.auto.praise = true;
+            if (this.model.minor.praiseAfter && bought == false && faith.value >= faith.maxValue) {
+                if (! this.model.auto.praise) sk.gui.autoSwitch('praise', 'SK_autoPraise');
             }
         }
         return bought;
