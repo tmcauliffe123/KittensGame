@@ -45,7 +45,7 @@ SK.Model = class {
         this.option = {
             book:'default',
             assign:'smart',
-            cycle:'redmoon'
+            cycle:'redmoon',
             minSecResRatio:1,
             maxSecResRatio:25,
             script:'none',
@@ -165,8 +165,8 @@ SK.Gui = class {
             [this.autoButton('Kill Switch', 'sk.clearScript()')],
             [this.autoButton('Check Efficiency', 'sk.tasks.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
             [this.autoSwitchButton('Auto Build', 'build'), this.autoButton('Select Building', '$(\'#SK_buildingOptions\').toggle();')],
-            [this.autoSwitchButton('Auto Assign', 'assign'), autoDropdown('assign', ['smart'], game.village.jobs)],
-            [this.autoSwitchButton('Auto Craft', 'craft'), autoDropdown('book', ['default'].concat(this.model.books), [])],
+            [this.autoSwitchButton('Auto Assign', 'assign'), this.autoDropdown('assign', ['smart'], game.village.jobs)],
+            [this.autoSwitchButton('Auto Craft', 'craft'), this.autoDropdown('book', ['default'].concat(this.model.books), [])],
             ['<label style="{{grid}}">Secondary Craft %</label>',
                 `<span style="display:flex; justify-content:space-around; {{grid}}" title="Between 0 and 100">`
                 + `<label>min:</label><input id="SK_minSRS" type="text" style="width:25px" onchange="sk.model.option.minSecResRatio=this.value" value="${this.model.option.minSecResRatio}">`
@@ -180,9 +180,9 @@ SK.Gui = class {
             [this.autoSwitchButton('Auto Party', 'party'), this.autoSwitchButton('Auto Explore', 'explore')],
             ['<span style="height:10px;{{grid}}"></span>'],
 
-            [this.autoSwitchButton('Auto Cycle', 'cycle'), autoDropdown('cycle', [], game.calendar.cycles)],
+            [this.autoSwitchButton('Auto Cycle', 'cycle'), this.autoDropdown('cycle', [], game.calendar.cycles)],
             [this.autoSwitchButton('Shatterstorm', 'shatter'), this.autoSwitchButton('Auto BCoin', 'bcoin')],
-            [this.autoSwitchButton('Auto Play', 'play'), autoDropdown('script', ['none'], SK.Scripts.listScripts(), 'sk.gui.scriptChange(this.value)')],
+            [this.autoSwitchButton('Auto Play', 'play'), this.autoDropdown('script', ['none'], SK.Scripts.listScripts(), 'sk.gui.scriptChange(this.value)')],
             ['<span style="height:10px;{{grid}}"></span>'],
 
             [this.autoSwitchButton('Auto Science', 'research'), this.autoSwitchButton('Auto Upgrade', 'workshop')],
@@ -303,10 +303,10 @@ SK.Gui = class {
         return button;
     }
 
-    autoSwitchButton(label, key) {
-        var element = 'SK_auto' + key[0].toUpperCase() + key.slice(1);
-        this.switches[key] = element;
-        var script = `sk.gui.autoSwitch('${key}', '${element}');`;
+    autoSwitchButton(label, auto) {
+        var element = 'SK_auto' + auto[0].toUpperCase() + auto.slice(1);
+        this.switches[auto] = element;
+        var script = `sk.gui.autoSwitch('${auto}', '${element}');`;
         return this.autoButton(label, script, element);
     }
 
@@ -334,6 +334,17 @@ SK.Gui = class {
         this.model.option.script = value;
         sk.scripts.init();
         if (this.model.auto.play) this.autoSwitch('play', 'SK_autoPlay');
+    }
+
+    refresh() {
+        for (var auto in sk.model.auto) {
+            var element = this.switches[auto];
+            $('#'+element).toggleClass('disabled', !this.model.auto[auto])
+        }
+        for (var option in sk.model.option) {
+            var element = this.dropdowns[option];
+            $('#'+element).val(this.model.option[option]);
+        }
     }
 }
 
@@ -1131,7 +1142,7 @@ SK.Tasks = class {
 
     // Auto buys and sells bcoins optimally
     autoBCoin(ticksPerCycle) {
-        if (this.model.auto.bcoin && game.diplomacy.get("leviathans").unlocked) {
+        if (this.model.auto.bcoin && game.diplomacy.get('leviathans').unlocked) {
             // When the price is > 1100 it loses 20-30% of its value
             // 880+ε is the highest it could be after an implosion
             // XXX I think this code might be cheating.
@@ -1148,10 +1159,10 @@ SK.Tasks = class {
     // Automatically use flux for fixing CCs and tempus fugit
     autoFlux(ticksPerCycle) {
         if (this.model.auto.flux) {
-            var flux = game.resPool.get("temporalFlux").value;
+            var flux = game.resPool.get('temporalFlux').value;
             var reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
             var fixcost = 3000;
-            var forfugit = game.time.heat / game.getEffect("heatPerTick");
+            var forfugit = game.time.heat / game.getEffect('heatPerTick');
             if (flux > reserve + forfugit + fixcost) {
                 this.fixCryochamber();
                 if (flux > 0) game.time.isAccelerated = true;
@@ -1211,7 +1222,11 @@ SK.Scripts = class {
         var action = this.state.shift();
         console.log(`Doing ${action}, remaining ${this.state}`);
         var done = this[script](action);
-        if (!done) this.state.push(action);
+        if (done) {
+            sk.gui.refresh();
+        } else {
+            this.state.push(action);
+        }
 
         // cleanup
         game.ui.activeTabId = oldTab;
