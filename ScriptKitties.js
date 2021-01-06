@@ -443,10 +443,12 @@ SK.Tasks = class {
     autoBuild(ticksPerCycle) {
         var built = false;
         if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
+            var cb = this.model.cathBuildings;
             for (var button of game.bldTab.buttons) {
                 if (! button.model.metadata) continue;
                 var name = button.model.metadata.name;
-                if (button.model.enabled && this.model.cathBuildings[name].enabled) {
+                if (button.model.enabled && cb[name].enabled
+                        && (!cb[name].limit || button.model.metadata.val < cb[name].limit)) {
                     button.controller.buyItem(button.model, {}, function(result) {
                         if (result) {built = true; button.update();}
                     });
@@ -564,7 +566,7 @@ SK.Tasks = class {
             if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
                 document.getElementById('observeBtn').click();
             }
-        }
+            }
         if (this.model.minor.promote) {
             var leader = game.village.leader;
             if (leader) {
@@ -599,9 +601,11 @@ SK.Tasks = class {
         var built = false;
         if (this.model.auto.build && game.spaceTab && game.spaceTab.planetPanels) {
             // Build space buildings
+            var sb = this.model.spaceBuildings;
             for (var planet of game.spaceTab.planetPanels) {
                 for (var spBuild of planet.children) {
-                    if (this.model.spaceBuildings[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked) {
+                    if (sb[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked
+                            && (!sb[name].limit || sbBuild.model.metadata.val < sb[name].limit)) {
                         // .enabled doesn't update automatically unless the tab is active, force it
                         if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                         if (spBuild.model.enabled) {
@@ -642,10 +646,12 @@ SK.Tasks = class {
                 game.timeTab?.vsPanel?.children[0]?.children
             ];
 
+            var tb = this.model.timeBuildings;
             for (var buttons of buttonGroups) {
                 if (buttons) {
                     for (var button of buttons) {
-                        if (this.model.timeBuildings[button.id]?.enabled && button.model.metadata.unlocked) {
+                        if (tb[button.id]?.enabled && button.model.metadata.unlocked
+                                && (!tb[name].limit || button.model.metadata.val < tb[name].limit)) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
                                 button.controller.buyItem(button.model, {}, function(result) {
