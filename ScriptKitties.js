@@ -218,7 +218,7 @@ SK.Gui = class {
 
             [this.autoSwitchButton('Auto Science', 'research'), this.autoSwitchButton('Auto Upgrade', 'workshop')],
             [this.autoSwitchButton('Auto Religion', 'religion'), this.autoSwitchButton('Auto Unicorn', 'unicorn')],
-            [this.autoSwitchButton('Energy Control', 'energy')],
+            [this.autoSwitchButton('Energy Control', 'energy'), this.autoSwitchButton('Auto Flux', 'flux')],
         ];
 
         var menu = '<div id="SK_mainOptions" class="dialog" style="display:grid; grid-template-columns:177px 177px; column-gap:5px; row-gap:5px; left:auto; top:auto !important; right:30px; bottom: 30px; padding:10px">';
@@ -380,6 +380,7 @@ SK.Tasks = class {
             {fn:'energyControl',interval:10, offset:8,   override:false},
 
             // every 4 seconds; schedule on odd numbers to avoid the interval:10
+            {fn:'autoFlux',     interval:20, offset:1,   override:false},
             {fn:'autoAssign',   interval:20, offset:3,   override:false},
             {fn:'autoResearch', interval:20, offset:7,   override:false},
             {fn:'autoWorkshop', interval:20, offset:9,   override:false},
@@ -1152,6 +1153,33 @@ SK.Tasks = class {
             }
         }
         return false;
+    }
+
+    // Automatically use flux for fixing CCs and tempus fugit
+    autoFlux(ticksPerCycle) {
+        if (this.model.auto.flux) {
+            var flux = game.resPool.get("temporalFlux").value;
+            var reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
+            var fixcost = 3000;
+            var forfugit = game.time.heat / game.getEffect("heatPerTick");
+            if (flux > reserve + forfugit + fixcost) {
+                this.fixCryochamber();
+                if (flux > 0) game.time.isAccelerated = true;
+            } else if (flux > reserve) {
+                // clicking the toggle-switch is HARD, this is fine as long as flux > 0
+                if (flux > 0) game.time.isAccelerated = true;
+            } else {
+                game.time.isAccelerated = false;
+            }
+        }
+        return false;
+    }
+
+    fixCryochamber() {
+        var button = game.timeTab.vsPanel.children[0].children[0];
+        button.controller.buyItem(button.model, {}, function(result) {
+            if (result) button.update();
+        });
     }
 
     autoPlay(ticksPerCycle) {
