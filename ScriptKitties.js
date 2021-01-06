@@ -2,8 +2,8 @@
 SK = class {
     constructor() {
         this.model = new SK.Model();
-        this.tasks = new SK.Tasks(this.model);
         this.scripts = new SK.Scripts(this.model);
+        this.tasks = new SK.Tasks(this.model, this.scripts);
         this.gui = new SK.Gui(this.model, this.tasks);
     }
 
@@ -249,7 +249,7 @@ SK.Gui = class {
         var menu = '';
         menu += '<div id="SK_buildingOptions" class="dialog help" style="border: 1px solid gray; display:none; margin-top:-333px; margin-left:-200px;">';
         menu +=   '<a href="#" onclick="$(\'#SK_buildingOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
-        menu +=   '<div class="tabsContainer">';
+        menu +=   '<div class="tabsContainer" style="position: static;">';
         menu +=     '<a href="#" id="SK_cathTab" class="tab" onclick="sk.gui.switchTab(\'cath\')" style="white-space: nowrap;">Cath</a>';
         menu +=     '<span> | </span>';
         menu +=     '<a href="#" id="SK_spaceTab" class="tab" onclick="sk.gui.switchTab(\'space\')" style="white-space: nowrap;">Space</a>';
@@ -341,7 +341,7 @@ SK.Gui = class {
     scriptChange(value) {
         this.model.option.playscript = value;
         sk.scripts.init();
-        if (this.model.auto.play) autoSwitch('play', 'SK_autoPlay');
+        if (this.model.auto.play) this.autoSwitch('play', 'SK_autoPlay');
     }
 }
 
@@ -349,8 +349,9 @@ SK.Gui = class {
  * These are the functions which are launched by the runAllAutomation timer
  **/
 SK.Tasks = class {
-    constructor(model) {
+    constructor(model, scripts) {
         this.model = model;
+        this.scripts = scripts;
 
         /** This governs how frequently tasks are run
          *   fn: what function to run
@@ -369,6 +370,9 @@ SK.Tasks = class {
             {fn:'autoMinor',    interval:3,  offset:1,   override:false},
             {fn:'autoHunt',     interval:3,  offset:2,   override:false},
 
+            // every 5 ticks == 1 second
+            {fn:'autoPlay',     interval:5,  offset:0,   override:false},
+
             // every 2 seconds == every game-day
             {fn:'autoSpace',    interval:10, offset:2,   override:false},
             {fn:'autoTime',     interval:10, offset:4,   override:false},
@@ -379,8 +383,8 @@ SK.Tasks = class {
             {fn:'autoAssign',   interval:20, offset:3,   override:false},
             {fn:'autoResearch', interval:20, offset:7,   override:false},
             {fn:'autoWorkshop', interval:20, offset:9,   override:false},
-            {fn:'autoReligion', interval:20, offset:13,  override:false},
-            {fn:'autoTrade',    interval:20, offset:15,  override:false},
+            {fn:'autoReligion', interval:20, offset:11,  override:false},
+            {fn:'autoTrade',    interval:20, offset:13,  override:false},
             {fn:'autoShatter',  interval:20, offset:17,  override:false},
             {fn:'autoEmbassy',  interval:20, offset:19,  override:false},
 
@@ -1149,6 +1153,12 @@ SK.Tasks = class {
         }
         return false;
     }
+
+    autoPlay(ticksPerCycle) {
+        if (this.model.auto.play) {
+            this.script.run(this.model.option.playscript);
+        }
+    }
 }
 
 SK.Scripts = class {
@@ -1171,7 +1181,7 @@ SK.Scripts = class {
         ];
     }
 
-    run() {
+    run(script) {
         // prep
         var oldTab = game.ui.activeTabId;
         var oldConfirm = game.ui.confirm; // for policies and building upgrades
@@ -1179,7 +1189,7 @@ SK.Scripts = class {
 
         // action
         var action = state.shift();
-        var done = startup(action);
+        var done = this[script](action);
         if (!done) state.push(action);
 
         // cleanup
@@ -1497,7 +1507,6 @@ SK.Scripts = class {
         // 4. better book distribution on 'default'
         // 5.
     }
-
 }
 
 var sk;
