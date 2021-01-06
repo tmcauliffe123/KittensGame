@@ -43,11 +43,12 @@ SK.Model = class {
         // These are the assorted variables
         this.books = ['parchment', 'manuscript', 'compedium', 'blueprint'];
         this.option = {
-            bookChoice:'default',
+            book:'default',
             assign:'smart',
-            cycle:5, // redmoon
+            cycle:'redmoon'
             minSecResRatio:1,
             maxSecResRatio:25,
+            script:'none',
         };
 
         // These will allow quick selection of the buildings which consume energy
@@ -140,6 +141,8 @@ SK.Gui = class {
     constructor(model, tasks) {
         this.model = model;
         this.tasks = tasks;
+        this.switches = {};
+        this.dropdowns = {};
         $("#footerLinks").append('<div id="SK_footerLink" class="column">'
             + ' | <a href="#" onclick="$(\'#SK_mainOptions\').toggle();"> ScriptKitties </a>'
             + '</div>');
@@ -158,50 +161,16 @@ SK.Gui = class {
     }
 
     generateMenu() {
-        // Auto Assign drop-down
-        var workerDropdown = '<select id="SK_assignChoice" style="{{grid}}" onclick="sk.model.option.assign=this.value;">';
-        workerDropdown += '<option value="smart" selected="selected">Smart</option>';
-        game.village.jobs.forEach(job => { workerDropdown += `<option value="${job.name}">${job.title}</option>`; });
-        workerDropdown += '</select>';
-
-        // Auto Craft Books drop-down
-        var bookDropdown = '<select id="SK_bookChoice" style="{{grid}}" onchange="sk.model.option.bookChoice=this.value;">';
-        bookDropdown += '<option value="default" selected="selected">Default</option>';
-        for (var book of this.model.books) {
-            var label = game.resPool.get(book).title;
-            var label = label[0].toUpperCase() + label.slice(1);
-            bookDropdown += `<option value="${book}">${label}</option>`;
-        }
-        bookDropdown += '</select>';
-
-        // Auto Cycle drop-down
-        var cycleDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="sk.model.option.cycle=parseInt(this.value);">';
-        for (var i = 0; i < game.calendar.cycles.length; i++) {
-            var cycle = game.calendar.cycles[i];
-            var sel = (i==this.model.option.cycle) ? ' selected="selected"' : '';
-            var label = `${cycle.glyph} ${cycle.title}`;
-            cycleDropdown += `<option value="${i}"${sel}>${label}</option>`;
-        }
-        cycleDropdown += '</select>';
-
-        // Auto Play drop-down
-        var scriptDropdown = '<select id="SK_scriptChoice" style="{{grid}}" onchange="sk.gui.scriptChange(this.value)">';
-        scriptDropdown += '<option value="none" selected="selected">None</option>';
-        for (var s of SK.Scripts.listScripts()) {
-            scriptDropdown += `<option value="${s.name}">${s.label}</option>`;
-        }
-        scriptDropdown += '</select>';
-
         var grid = [ // Grid Layout
             [this.autoButton('Kill Switch', 'sk.clearScript()')],
             [this.autoButton('Check Efficiency', 'sk.tasks.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
             [this.autoSwitchButton('Auto Build', 'build'), this.autoButton('Select Building', '$(\'#SK_buildingOptions\').toggle();')],
-            [this.autoSwitchButton('Auto Assign', 'assign'), workerDropdown],
-            [this.autoSwitchButton('Auto Craft', 'craft'), bookDropdown],
+            [this.autoSwitchButton('Auto Assign', 'assign'), autoDropdown('assign', ['smart'], game.village.jobs)],
+            [this.autoSwitchButton('Auto Craft', 'craft'), autoDropdown('book', ['default'].concat(this.model.books), [])],
             ['<label style="{{grid}}">Secondary Craft %</label>',
                 `<span style="display:flex; justify-content:space-around; {{grid}}" title="Between 0 and 100">`
-                + `<label>min:</label><input type="text" style="width:25px" onchange="sk.model.option.minSecResRatio=this.value" value="${this.model.option.minSecResRatio}">`
-                + `<label>max:</label><input type="text" style="width:25px" onchange="sk.model.option.maxSecResRatio=this.value" value="${this.model.option.maxSecResRatio}">`
+                + `<label>min:</label><input id="SK_minSRS" type="text" style="width:25px" onchange="sk.model.option.minSecResRatio=this.value" value="${this.model.option.minSecResRatio}">`
+                + `<label>max:</label><input id="SK_maxSRS" type="text" style="width:25px" onchange="sk.model.option.maxSecResRatio=this.value" value="${this.model.option.maxSecResRatio}">`
                 + `</span>`
             ],
             ['<span style="height:10px;{{grid}}"></span>'],
@@ -211,15 +180,17 @@ SK.Gui = class {
             [this.autoSwitchButton('Auto Party', 'party'), this.autoSwitchButton('Auto Explore', 'explore')],
             ['<span style="height:10px;{{grid}}"></span>'],
 
-            [this.autoSwitchButton('Auto Cycle', 'cycle'), cycleDropdown],
+            [this.autoSwitchButton('Auto Cycle', 'cycle'), autoDropdown('cycle', [], game.calendar.cycles)],
             [this.autoSwitchButton('Shatterstorm', 'shatter'), this.autoSwitchButton('Auto BCoin', 'bcoin')],
-            [this.autoSwitchButton('Auto Play', 'play'), scriptDropdown],
+            [this.autoSwitchButton('Auto Play', 'play'), autoDropdown('script', ['none'], SK.Scripts.listScripts(), 'sk.gui.scriptChange(this.value)')],
             ['<span style="height:10px;{{grid}}"></span>'],
 
             [this.autoSwitchButton('Auto Science', 'research'), this.autoSwitchButton('Auto Upgrade', 'workshop')],
             [this.autoSwitchButton('Auto Religion', 'religion'), this.autoSwitchButton('Auto Unicorn', 'unicorn')],
             [this.autoSwitchButton('Energy Control', 'energy'), this.autoSwitchButton('Auto Flux', 'flux')],
         ];
+        this.dropdowns['minSecResRatio'] = 'SK_minSRS';
+        this.dropdowns['maxSecResRatio'] = 'SK_maxSRS';
 
         var menu = '<div id="SK_mainOptions" class="dialog" style="display:grid; grid-template-columns:177px 177px; column-gap:5px; row-gap:5px; left:auto; top:auto !important; right:30px; bottom: 30px; padding:10px">';
         menu += '<a href="#" onclick="$(\'#SK_mainOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
@@ -320,7 +291,7 @@ SK.Gui = class {
 
     autoSwitch(id, element) {
         this.model.auto[id] = !this.model.auto[id];
-        game.msg(`${element} is now  ${(this.model.auto[id] ? 'on' : 'off')}`);
+        game.msg(`${element} is now ${(this.model.auto[id] ? 'on' : 'off')}`);
         $(`#${element}`).toggleClass('disabled', !this.model.auto[id]);
     }
 
@@ -334,12 +305,33 @@ SK.Gui = class {
 
     autoSwitchButton(label, key) {
         var element = 'SK_auto' + key[0].toUpperCase() + key.slice(1);
+        this.switches[key] = element;
         var script = `sk.gui.autoSwitch('${key}', '${element}');`;
         return this.autoButton(label, script, element);
     }
 
+    autoDropdown(option, extras, items, script) {
+        var element = `SK_${option}Choice`;
+        this.dropdowns[option] = element;
+        script ||= `sk.model.option.${option}=this.value;`;
+        var dropdown = `<select id="${element}" style="{{grid}}" onchange="${script}">`;
+        for (var name of extras) {
+            var sel = (name == this.model.option[option]) ? ' selected="selected"' : '';
+            var title = name[0].toUpperCase() + name.slice(1);
+            dropdown += `<option value="${name}"${sel}>${title}</option>`;
+        }
+        for (var item of items) {
+            var sel = (item.name == this.model.option[option]) ? ' selected="selected"' : '';
+            var title = item.title;
+            if (item.glyph) title = item.glyph + ' ' + title;
+            dropdown += `<option value="${item.name}"${sel}>${title}</option>`;
+        }
+        dropdown += '</select>';
+        return dropdown;
+    }
+
     scriptChange(value) {
-        this.model.option.playscript = value;
+        this.model.option.script = value;
         sk.scripts.init();
         if (this.model.auto.play) this.autoSwitch('play', 'SK_autoPlay');
     }
@@ -522,7 +514,7 @@ SK.Tasks = class {
                         } else {
                             craftCount = 0;
                         }
-                    } else if (this.model.books.includes(output) && this.model.option.bookChoice != 'default') {
+                    } else if (this.model.books.includes(output) && this.model.option.book != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
                         if (outputIndex > choiceIndex) craftCount = 0;
                     } else {
@@ -541,7 +533,7 @@ SK.Tasks = class {
                 craftCount = Math.max(craftCount, minimumReserve);
                 if (craftCount == 0 || craftCount == Infinity) {
                     // nothing to do, or no reason to act
-                } else if (this.model.option.bookChoice == 'blueprint' && output == 'compedium' && game.resPool.get('compedium').value > 25) {
+                } else if (this.model.option.book == 'blueprint' && output == 'compedium' && game.resPool.get('compedium').value > 25) {
                     // save science for making blueprints
                 } else {
                     game.craft(output, craftCount);
@@ -980,11 +972,13 @@ SK.Tasks = class {
                 }
 
                 // adjust to end in the right cycle
-                if (this.model.auto.cycle && game.calendar.cycle != this.model.option.cycle) {
+                var cyclename = this.model.option.cycle;
+                var cycle = game.calendar.cycles.findIndex(function(c){return c.name == cyclename});
+                if (this.model.auto.cycle && game.calendar.cycle != cycle) {
                     // desired cycle: sk.model.option.cycle
                     // current cycle: game.calendar.cycle
                     // year in cycle: game.calendar.cycleYear
-                    var deltaCycle = (this.model.option.cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+                    var deltaCycle = (cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
                     var yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
                     shatter = Math.floor(shatter / 50)*50 + yearsToCycle;
                 }
@@ -1180,7 +1174,7 @@ SK.Tasks = class {
 
     autoPlay(ticksPerCycle) {
         if (this.model.auto.play) {
-            this.scripts.run(this.model.option.playscript);
+            this.scripts.run(this.model.option.script);
         }
     }
 }
@@ -1197,11 +1191,11 @@ SK.Scripts = class {
 
     static listScripts() {
         return [
-            {name:'test',        label:'Test Script'},
-            {name:'startup',     label:'Post Chrono Setup'},
-            {name:'fastParagon', label:'Fast Reset'},
-            {name:'chronoloop',  label:'Chrono Reset'},
-            {name:'hoglagame',   label:'Hoglagame'},
+            {name:'test',        title:'Test Script'},
+            {name:'startup',     title:'Post Chrono Setup'},
+            {name:'fastParagon', title:'Fast Reset'},
+            {name:'chronoloop',  title:'Chrono Reset'},
+            {name:'hoglagame',   title:'Hoglagame'},
         ];
     }
 
