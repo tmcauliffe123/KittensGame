@@ -184,8 +184,8 @@ SK.Gui = class {
         }
         cycleDropdown += '</select>';
 
-        // Auto Scripts drop-down
-        var scriptDropdown = '<select id="SK_cycleChoice" style="{{grid}}" onchange="sk.model.option.script=this.value;">';
+        // Auto Play drop-down
+        var scriptDropdown = '<select id="SK_scriptChoice" style="{{grid}}" onchange="sk.gui.scriptChange(this.value)">';
         scriptDropdown += '<option value="none" selected="selected">None</option>';
         for (var s of SK.Scripts.listScripts()) {
             scriptDropdown += `<option value="${s.name}">${s.label}</option>`;
@@ -213,7 +213,7 @@ SK.Gui = class {
 
             [this.autoSwitchButton('Auto Cycle', 'cycle'), cycleDropdown],
             [this.autoSwitchButton('Shatterstorm', 'shatter'), this.autoSwitchButton('Auto BCoin', 'bcoin')],
-            [this.autoSwitchButton('Scripts', 'script'), scriptDropdown],
+            [this.autoSwitchButton('Auto Play', 'play'), scriptDropdown],
             ['<span style="height:10px;{{grid}}"></span>'],
 
             [this.autoSwitchButton('Auto Science', 'research'), this.autoSwitchButton('Auto Upgrade', 'workshop')],
@@ -338,6 +338,11 @@ SK.Gui = class {
         return this.autoButton(label, script, element);
     }
 
+    scriptChange(value) {
+        this.model.option.playscript = value;
+        sk.scripts.init();
+        if (this.model.auto.play) autoSwitch('play', 'SK_autoPlay');
+    }
 }
 
 /**
@@ -448,7 +453,20 @@ SK.Tasks = class {
                 }
             }
         }
-        // if (built) game.render(); // update tooltip
+        // if (built) game.render(); // update tooltip, is kinda slow
+        return built;
+    }
+
+    singleBuild(building) {
+        var built = false;
+        for (button of game.bldTab.buttons) {
+            if (button.model.metadata.name != building) continue;
+            if (button.model.enabled) {
+                button.controller.buyItem(button.model, {}, function(result) {
+                    if (result) {built = true; button.update();}
+                });
+            }
+        }
         return built;
     }
 
@@ -1130,6 +1148,11 @@ SK.Tasks = class {
 SK.Scripts = class {
     constructor(model) {
         this.model = model;
+        this.init();
+    }
+
+    init() {
+        this.state = ['init'];
     }
 
     static listScripts() {
@@ -1142,63 +1165,291 @@ SK.Scripts = class {
         ];
     }
 
-    startup() {
-        switch (pants) {
-            case 0:
-                // buy a workshop
-                var oldTab = game.ui.activeTabId;
-                game.ui.activeTabId = 'Science'; game.render();
-                game.ui.activeTabId = 'Workshop'; game.render();
-                game.ui.activeTabId = oldTab; game.render();
-                this.model.auto.research = true;
-                this.model.auto.workshop = true;
-                this.model.minor.conserveRare = false; // TODO: we don't want Blackchain, IBH
-                break;
-            case 1:
-                // * wait for tech/upgrade buy
-                // upgrade all buildings
-                // select all buildings except AI Core, Zebras
-                this.model.auto.build = true;
+    run() {
+        // prep
+        var oldTab = game.ui.activeTabId;
+        var oldConfirm = game.ui.confirm; // for policies and building upgrades
+        game.ui.confirm = alwaysYes;
 
-                // select space: Redmoon/Dune/Sun{lifter,forge}
-                var oldTab = game.ui.activeTabId;
-                game.ui.activeTabId = 'Space'; game.render();
-                game.ui.activeTabId = oldTab; game.render();
-                this.model.minor.program = true;
+        // action
+        var action = state.shift();
+        var done = startup(action);
+        if (!done) state.push(action);
 
-                // people
-                // XXX: assign leader to priest
-                this.model.option.assign = 'smart';
-                this.model.auto.assign = true;
+        // cleanup
+        game.ui.activeTabId = oldTab;
+        game.render();
+        game.ui.confirm = oldConfirm;
+    }
+
+    alwaysYes(title, msg, fn) {
+        fn();
+    }
+
+    startup(action) {
+        // XXX TODO: Fix Cryochambers
+        switch(action) {
+            case 'init': // -> workshop-start, science-start
+                this.model.auto.bcoin = true;
+                this.model.auto.explore = true;
                 this.model.auto.party = true;
+                this.model.auto.unicorn = true;
+                this.model.minor.program = true;
                 this.model.minor.feed = true;
                 this.model.minor.promote = true;
+                this.model.minor.praiseAfter = true;
+                this.state.push('workshop-start');
+                this.state.push('science-start');
+                return true;
 
-                // start unicorn
-                this.model.auto.hunt = true;
+            case 'workshop-start': // -> workshop-end
+                if (game.bld.get('workshop').val != 0 || sk.tasks.singleBuild('workshop')) {
+                    game.ui.activeTabId = 'Workshop';
+                    game.render();
+                    this.model.auto.workshop = true;
+                    this.state.push('workshop-end');
+                    return true;
+                }
+                return false;
 
-                // todo: turn on steamworks
-                break;
+            case 'workshop-end': // -|
+                if (game.getEffect('hunterRatio') > 4) {
+                    this.model.auto.hunt = true;
+                    return true;
+                }
+                return false;
 
-            case 2:
-                // * wait 200 ticks for mass building buy
-                // unselect Library/Obs/Warehouse/Harbour/Quarry/Oil Well/Zig
-                this.model.auto.craft = true;
+            case 'science-start': // -> science-mid
+                game.ui.activeTabId = 'Science';
+                game.render();
+                this.model.auto.research = true;
+                this.state.push('science-mid');
+                return true;
 
-                var oldTab = game.ui.activeTabId;
+            case 'science-mid': // -> build-start, policy, science-end
+                var requiredTechs = [
+                    'advExogeology',
+                    'ai',
+                    'dimensionalPhysics',
+                    'genetics',
+                    'oilProcessing',
+                    'superconductors',
+                    'thorium',
+                ];
+                for (var tech in requiredTechs) {
+                    if (game.science.get(tech).researched == false) return false;
+                }
+                this.model.auto.research = false;
+                this.model.minor.conserveRare = false;
+                this.state.push('build-start');
+                this.state.push('policy');
+                this.state.push('science-end');
+                return true;
+
+            case 'science-end': // -|
+                // buy remaining Sciences, excluding Blackchain
+                var bannedTech = 'blackchain'
+                var done = true;
+                for (var button of game.libraryTab.buttons) {
+                    if (button.model.metadata.researched == true) continue;
+                    if (button.model.metadata.name == 'blackchain') continue;
+                    if (button.model.metadata.unlocked == false) {
+                        done = false;
+                        continue;
+                    }
+                    button.controller.buyItem(button.model, {}, function(result) {
+                        if (result) button.update();
+                    });
+                    return false; // only try to buy one per pass
+                }
+                return done;
+
+            case 'build-start': // -> religion, steamworks, build-end
+                /** cath **/
+                var climit = {
+                    'library': 200, // actually data center
+                    'observatory':500,
+                    'warehouse':200,
+                    'harbor':200,
+                    'quarry':200,
+                    'oilWell':200,
+                    'calciner':200,
+                    'magneto':120,
+                    'steamworks':120,
+                    'ziggurat':100,
+                };
+                for (bname in cathBuildings) {
+                    if (bname == 'aiCore' || bname.slice(0,5) == 'zebra') continue;
+                    cathBuildings[bname].enabled = true;
+                }
+                for (bname in climit) cathBuildings[bname].limit = climit[bname];
+                /** upgrade all buildings **/
+                for (var button of game.bldTab.buttons) {
+                    if (button.controller.upgrade) button.controller.upgrade(button.model);
+                }
+                //
+                /** space **/
+                var space = [
+                    'sattelite', 'moonOutpost', 'moonBase',
+                    'planetCracker', 'hydrofracturer', 'spiceRefinery',
+                    'sunlifter', 'containmentChamber', 'heatsink', 'sunforge',
+                    'cryostation', 'spaceBeacon', 'entangler',
+                    'terraformingStation', 'tectonic', 'moltenCore',
+                ];
+                for (bname of space) spaceBuildings[bname].enabled = true;
+                var slimit = { 'containmentChamber':5, 'heatsink':50, }
+                for (bname in slimit) spaceBuildings[bname].limit = slimit[bname];
+                //
+                /** time **/
+                var time = [ 'marker', 'blackPyramid', ];
+                for (bname of time) timeBuildings[bname].enabled = true;
+                this.model.auto.build = true;
+                /** children **/
                 game.ui.activeTabId = 'Religion'; game.render();
-                game.ui.activeTabId = oldTab; game.render();
-                // buy solar revolution
-                this.model.auto.religion = true;
+                game.ui.activeTabId = 'Space'; game.render();
+                game.ui.activeTabId = 'Time'; game.render();
+                this.state.push('religion');
+                this.state.push('steamworks');
+                this.state.push('build-end');
+                return true;
 
-                // start working on the religion side
-                this.model.auto.unicorn = true;
-                break;
+            case 'build-end': // -> time-start
+                for (var button of game.bldTab.buttons) {
+                    if (button.model.metadata?.name != 'chronosphere') continue;
+                    if (button.model.resourceIsLimited != true) return false; // not capped yet
+                    break;
+                }
+                var lateSpace = ['spaceElevator', 'orbitalArray', 'hydroponics'];
+                for (bname of lateSpace) spaceBuildings[bname].enabled = true;
+                this.model.auto.craft = true;
+                this.state.push('time-start');
+                return true;
 
-            case 2:
-                // policies
+            case 'religion': // -> assign
+                var done = false;
+                for (var button of game.religionTab.rUpgradeButtons) {
+                    if (button.model.name != 'solarRevolution') continue;
+                    if (! button.model.visible) continue;
+                    if (button.model.metadata.researched) {
+                        // someone got to it already
+                        done = true;
+                    } else {
+                        if ( ! button.model.enabled) button.update();
+                        if (button.model.enabled) {
+                            button.controller.buyItem(button.model, {}, function(result) {
+                                if (result) { done = true; button.update(); }
+                            });
+                        }
+                    }
+                    break;
+                }
+                if (done) this.model.auto.religion = true;
+                this.state.push('assign');
+                return done;
 
-                this.model.option.cycle = 5;
+            case 'steamworks': // -|
+                if (game.bld.get('steamworks').val != 0) {
+                    game.bld.get('steamworks').on = game.bld.get('steamworks').val;
+                    game.bld.get('steamworks').isAutomationEnabled = false;
+                    return true;
+                } else {
+                    return false;
+                }
+
+            case 'policy': // -> embassy-start
+                var chosen = [
+                    'liberty', 'republic', 'liberalism',
+                    'diplomacy', 'culturalExchange', 'zebraRelationsBellicosity',
+                    'outerSpaceTreaty', 'expansionism', 'necrocracy',
+                    'epicurianism', 'mysticism',
+                    'environmentalism', 'conservation',
+                ];
+                var researched = 0;
+                for (var button of game.libraryTab.policyPanel.children) {
+                    var policy = button.model.metadata;
+                    if (policy.researched == true) {
+                        researched += 1;
+                        continue;
+                    }
+                    if (policy.blocked == true || policy.unlocked == false) continue;
+                    if (chosen.includes(policy.name)) {
+                        button.controller.buyItem(button.model, {}, function(result) {
+                            if (result) button.update();
+                        });
+                        return false; // only try to buy one per pass
+                    }
+                }
+                var done = (researched == chosen.length);
+                if (done) this.state.push('embassy-start');
+                return done;
+
+            case 'assign': // -|
+                if (game.village.getFreeKittens() > 0) {
+                    game.village.assignJob(game.village.getJob('priest'), 1); // assign leader
+                    this.model.auto.assign = true;
+                    return true;
+                }
+                return false;
+
+            case 'embassy-start': // -> embassy-mid
+                game.ui.activeTabId = 'Trade';
+                game.render();
+                this.state.push('embassy-mid');
+                return true;
+
+            case 'embassy-mid': // -|
+                for (var panel of game.diplomacyTab.racePanels) {
+                    if (panel.race.name != 'zebras') continue;
+                    var button = panel.embassyButton;
+                    if (button.model.resourceIsLimited) {
+                        this.model.auto.embassy = true;
+                        this.model.auto.trade = true;
+                        return true;
+                    } else {
+                        button.controller.buyItem(button.model, {}, function(result) {
+                            if (result) {button.update();}
+                        });
+                    }
+                }
+                return false;
+
+            case 'time-start': // -> time-mid
+                if (this.state.length != 0) return false; // wait until all other reqs are satisfied
+                var tlimit = {
+                    'temporalBattery':30,
+                    'blastFurnace':30,
+                    'temporalImpedance':10,
+                    'ressourceRetrieval':20,
+                    'chronocontrol':1
+                };
+                for (bname in tlimit) {
+                    spaceBuildings[bname].limit = tlimit[bname];
+                    spaceBuildings[bname].enabled = true;
+                }
+                this.state.push('time-end');
+                return true;
+
+
+            case 'time-end':
+                if (derp()) {
+                    this.model.auto.cycle = true;
+                    this.model.auto.shatter = true;
+                    this.state.push('dark-future');
+                    return true;
+                }
+                return false;
+
+            default:
+                this.model.auto.play = false;
+                game.msg(`CRITICAL: unrecognized state ${action}`);
+                return false;
+
+            case 'todo':
+                build('spaceStation');
+                sell('all kinds of things');
+                this.state.push('xxx');
+                this.model.minor.unicornIvory = true;
+                // auto Fugit
         }
     }
 
@@ -1236,8 +1487,8 @@ SK.Scripts = class {
     todo() {
         // TODO
         // 1. script settings save/load
-        // 2. disable [auto.script] on script change
-        // 4. better book distribution on "default"
+        // 2. disable [auto.play] on script change
+        // 4. better book distribution on 'default'
         // 5.
     }
 
@@ -1250,5 +1501,5 @@ if (game && game.bld) {
     dojo.subscribe('game/start', function(){ sk = new SK()});
 }
 
-// XXX this is how to save/load data
+// XXX this is how to
 LCstorage['net.sagefault.scriptkittens.state'];
