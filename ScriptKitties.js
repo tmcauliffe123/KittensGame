@@ -553,15 +553,9 @@ SK.Tasks = class {
 
     autoMinor(ticksPerCycle) {
         if (this.model.minor.feed) {
-            if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
+            if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').unlocked) {
                 var energy = game.diplomacy.get('leviathans').energy || 0;
-                // I'd rather a less hardcoded method, but that's what they use
-                // alternative would be parsing the text, but that seems just as hacky
-                var markerCap = Math.floor(
-                    (game.religion.getZU('marker').getEffectiveValue(game) * 5 + 5) *
-                    (1 + game.getEffect('leviathansEnergyModifier'))
-                );
-                if (energy < markerCap) {
+                if (energy < game.diplomacy.getMarkerCap()) {
                     game.diplomacy.feedElders();
                 }
             }
@@ -571,7 +565,7 @@ SK.Tasks = class {
             if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
                 document.getElementById('observeBtn').click();
             }
-            }
+        }
         if (this.model.minor.promote) {
             var leader = game.village.leader;
             if (leader) {
@@ -921,7 +915,7 @@ SK.Tasks = class {
                 var tiRes = game.resPool.get('titanium');
                 var unoRes = game.resPool.get('unobtainium');
 
-                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && game.diplomacy.get('leviathans').duration != 0) {
+                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked) {
                     game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
                     traded = true;
                 } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
@@ -1141,11 +1135,13 @@ SK.Tasks = class {
         return acted;
     }
 
-    // Auto buys and sells bcoins optimally (not yet tested)
+    // Auto buys and sells bcoins optimally
     autoBCoin(ticksPerCycle) {
-        if (this.model.auto.bcoin && game.science.get('antimatter').researched) {
+        if (this.model.auto.bcoin && game.diplomacy.get("leviathans").unlocked) {
             // When the price is > 1100 it loses 20-30% of its value
             // 880+ε is the highest it could be after an implosion
+            // XXX I think this code might be cheating.
+            // XXX TEST: disable this, sell out, displease elders, wait for them to return, see if I can buy
             if (game.calendar.cryptoPrice < 1095) {
                 game.diplomacy.buyBcoin();
             } else if (game.resPool.get('blackcoin').value > 0) {
