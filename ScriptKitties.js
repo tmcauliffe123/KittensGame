@@ -30,14 +30,14 @@ SK.Model = class {
             conserveRare:true,
         };
         this.minorNames = {
-            program:"Space Programs",
-            observe:"Auto Observe",
-            feed:"Auto Feed Elders",
-            promote:"Auto Promote Leader",
-            wait4void:"Only Shatter at Season Start",
-            praiseAfter:"Praise After Religion",
-            unicornIvory:"Unicorn Ivory Optimization",
-            conserveRare:"Conserve Rare Resources",
+            program:'Space Programs',
+            observe:'Auto Observe',
+            feed:'Auto Feed Elders',
+            promote:'Auto Promote Leader',
+            wait4void:'Only Shatter at Season Start',
+            praiseAfter:'Praise After Religion',
+            unicornIvory:'Unicorn Ivory Optimization',
+            conserveRare:'Conserve Rare Resources',
         };
 
         // These are the assorted variables
@@ -52,21 +52,21 @@ SK.Model = class {
 
         // These will allow quick selection of the buildings which consume energy
         this.power = {};
-        for (var b of ["biolab", "oilWell", "factory", "calciner", "accelerator"]) {
+        for (var b of ['biolab', 'oilWell', 'factory', 'calciner', 'accelerator']) {
             this.power[b] = game.bld.get(b);
         }
 
         // Note: per game: uncommon==luxuries==(trade goods), rare==unicorns+karma, exotic==relics+void+bc+bs
         this.rareResources = [
-            "antimatter",
-            "blackcoin",
-            "eludium",
-            "relic",
-            "temporalFlux",
-            "timeCrystal",
-            "unobtainium",
-            "void",
-            "bloodstone",
+            'antimatter',
+            'blackcoin',
+            'eludium',
+            'relic',
+            'temporalFlux',
+            'timeCrystal',
+            'unobtainium',
+            'void',
+            'bloodstone',
         ];
 
         this.populateDataStructures();
@@ -81,11 +81,11 @@ SK.Model = class {
     populateDataStructures() {
         // Building lists for controlling Auto Build/Space/Time
         this.cathBuildings = {/* list is auto-generated, looks like:
-            field:{name:"Catnip Field", enabled:false},
+            field:{name:'Catnip Field', enabled:false},
             ...
         */};
         this.cathGroups = [/*
-            ["Food Production", ["field", "pasture", "aqueduct"]],
+            ['Food Production', ['field', 'pasture', 'aqueduct']],
             ...
         */];
         for (var group of game.bld.buildingGroups) {
@@ -94,11 +94,11 @@ SK.Model = class {
         }
 
         this.spaceBuildings = {/*
-            spaceElevator:{name:"Space Elevator", enabled:false},
+            spaceElevator:{name:'Space Elevator', enabled:false},
             ...
         */};
         this.spaceGroups = [/*
-            ["Cath", ["spaceElevator", "sattelite", "spaceStation"]],
+            ['Cath', ['spaceElevator', 'sattelite', 'spaceStation']],
             ...
         */];
         for (var planet of game.space.planets) {
@@ -124,7 +124,7 @@ SK.Model = class {
         var group = [];
         for (var building of buildings) {
             if (buildings==game.religion.zigguratUpgrades && building.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
-            var label = building.stages?.map(function(x){return x.label}).join(' / '); // for "Library / Data Center", etc
+            var label = building.stages?.map(function(x){return x.label}).join(' / '); // for 'Library / Data Center', etc
             label ||= building.label;
             dict[building.name] = {name:label, enabled:false};
             group.push(building.name);
@@ -411,7 +411,7 @@ SK.Tasks = class {
         var secondsPlayed = game.calendar.trueYear() * game.calendar.seasonsPerYear * game.calendar.daysPerSeason * game.calendar.ticksPerDay / game.ticksPerSecond;
         var numberKittens = game.resPool.get('kittens').value;
         var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
-        game.msg("Your current efficiency is " + parseFloat(curEfficiency).toFixed(2) + " Paragon per hour.");
+        game.msg('Your current efficiency is ' + parseFloat(curEfficiency).toFixed(2) + ' Paragon per hour.');
     }
 
     /*** Individual Auto Scripts start here ***/
@@ -420,11 +420,11 @@ SK.Tasks = class {
     // Collection of Minor Auto Tasks
     autoNip(ticksPerCycle) {
         if (this.model.auto.build && game.bld.get('field').val < 20) {
-            $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger("click");
+            $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger('click');
         }
         if (this.model.auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
             if (game.bldTab.buttons[1].model.enabled) {
-                $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger("click");
+                $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger('click');
             }
         }
         return false;
@@ -532,13 +532,13 @@ SK.Tasks = class {
 
     autoMinor(ticksPerCycle) {
         if (this.model.minor.feed) {
-            if (game.resPool.get("necrocorn").value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
-                var energy = game.diplomacy.get("leviathans").energy || 0;
+            if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').duration != 0) {
+                var energy = game.diplomacy.get('leviathans').energy || 0;
                 // I'd rather a less hardcoded method, but that's what they use
                 // alternative would be parsing the text, but that seems just as hacky
                 var markerCap = Math.floor(
-                    (game.religion.getZU("marker").getEffectiveValue(game) * 5 + 5) *
-                    (1 + game.getEffect("leviathansEnergyModifier"))
+                    (game.religion.getZU('marker').getEffectiveValue(game) * 5 + 5) *
+                    (1 + game.getEffect('leviathansEnergyModifier'))
                 );
                 if (energy < markerCap) {
                     game.diplomacy.feedElders();
@@ -546,7 +546,7 @@ SK.Tasks = class {
             }
         }
         if (this.model.minor.observe) {
-            var checkObserveBtn = document.getElementById("observeBtn");
+            var checkObserveBtn = document.getElementById('observeBtn');
             if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
                 document.getElementById('observeBtn').click();
             }
@@ -556,7 +556,7 @@ SK.Tasks = class {
             if (leader) {
                 var expToPromote = game.village.getRankExp(leader.rank);
                 var goldToPromote = 25 * (leader.rank + 1);
-                if (leader.exp >= expToPromote && game.resPool.get("gold").value >= goldToPromote) {
+                if (leader.exp >= expToPromote && game.resPool.get('gold').value >= goldToPromote) {
                     if (game.village.sim.promote(leader) > 0) {
                         var census = game.villageTab.censusPanel.census;
                         census.renderGovernment(census.container);
@@ -651,13 +651,13 @@ SK.Tasks = class {
 
     // Festival automatically
     autoParty(ticksPerCycle) {
-        if (this.model.auto.party && game.science.get("drama").researched) {
+        if (this.model.auto.party && game.science.get('drama').researched) {
             var catpower = game.resPool.get('manpower').value;
             var culture = game.resPool.get('culture').value;
             var parchment = game.resPool.get('parchment').value;
 
             if (catpower > 1500 && culture > 5000 && parchment > 2500) {
-                if (game.prestige.getPerk("carnivals").researched && game.calendar.festivalDays < 400*10) {
+                if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays < 400*10) {
                     game.village.holdFestival(1);
                 } else if (game.calendar.festivalDays == 0) {
                     game.village.holdFestival(1);
@@ -901,12 +901,12 @@ SK.Tasks = class {
                 var unoRes = game.resPool.get('unobtainium');
 
                 if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && game.diplomacy.get('leviathans').duration != 0) {
-                    game.diplomacy.tradeAll(game.diplomacy.get("leviathans"));
+                    game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
                     traded = true;
                 } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
                     // don't waste the iron, make some space for it.
                     var ironRes = game.resPool.get('iron');
-                    var sellIron = game.diplomacy.get("zebras").sells[0];
+                    var sellIron = game.diplomacy.get('zebras').sells[0];
                     var expectedIron = sellIron.value * sellCount *
                         (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
                         (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
@@ -916,9 +916,9 @@ SK.Tasks = class {
 
                     // don't overdo it
                     var deltaTi = tiRes.maxValue - tiRes.value;
-                    var expectedTi = game.resPool.get("ship").value * 0.03;
+                    var expectedTi = game.resPool.get('ship').value * 0.03;
                     sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
-                    game.diplomacy.tradeMultiple(game.diplomacy.get("zebras"), sellCount);
+                    game.diplomacy.tradeMultiple(game.diplomacy.get('zebras'), sellCount);
                     traded = true;
                 }
             }
@@ -936,7 +936,7 @@ SK.Tasks = class {
         }
 
         // mass craft
-        var shatterTCGain = game.getEffect("shatterTCGain") * (1 + game.getEffect("rrRatio"));
+        var shatterTCGain = game.getEffect('shatterTCGain') * (1 + game.getEffect('rrRatio'));
         var cal = game.calendar;
         var ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
         this.autoCraft(shatterTCGain * ticksPassing);
@@ -953,14 +953,14 @@ SK.Tasks = class {
         if (this.model.auto.shatter || this.model.auto.cycle) {
             if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
                 var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
-                var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect("heatPerTick"));
+                var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect('heatPerTick'));
                 var startStorm = shattering || (this.model.minor.wait4void ? startOfSeason : true) && lowHeat;
 
                 // find length of shatter storm
                 var shatter = 0;
                 if (this.model.auto.shatter && startStorm) {
                     // how many shatters worth of heat can we afford?
-                    var factor = game.challenges.getChallenge("1000Years").researched ? 5 : 10;
+                    var factor = game.challenges.getChallenge('1000Years').researched ? 5 : 10;
                     var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
                 }
 
@@ -1010,7 +1010,7 @@ SK.Tasks = class {
     // Explore for new Civs
     autoExplore(ticksPerCycle) {
         var available = false;
-        if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get("manpower").value >= 1000) {
+        if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get('manpower').value >= 1000) {
             for (var race of game.diplomacy.races) {
                 if (race.unlocked) continue;
                 switch(race.name) {
@@ -1018,16 +1018,16 @@ SK.Tasks = class {
                         available = true;
                         break;
                     case 'nagas':
-                        available = game.resPool.get("culture").value >= 1500;
+                        available = game.resPool.get('culture').value >= 1500;
                         break;
                     case 'zebras':
-                        available = game.resPool.get("ship").value >= 1;
+                        available = game.resPool.get('ship').value >= 1;
                         break;
                     case 'spiders':
-                        available = game.resPool.get("ship").value >= 100 && game.resPool.get("science").maxValue > 125000;
+                        available = game.resPool.get('ship').value >= 100 && game.resPool.get('science').maxValue > 125000;
                         break;
                     case 'dragons':
-                        available = game.science.get("nuclearFission").researched;
+                        available = game.science.get('nuclearFission').researched;
                         break;
                     case 'leviathans':
                         break;
@@ -1054,13 +1054,13 @@ SK.Tasks = class {
              * Each Tower causes a 0.05% chance for a rift per game-day
              * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
              */
-            var riftUnicorns = 500 * (1 + game.getEffect("unicornsRatioReligion") * 0.1);
-            var unicornChanceRatio = 1.1 * (1 + game.getEffect("timeRatio") * 0.25);
+            var riftUnicorns = 500 * (1 + game.getEffect('unicornsRatioReligion') * 0.1);
+            var unicornChanceRatio = 1.1 * (1 + game.getEffect('timeRatio') * 0.25);
             var upsprc = riftUnicorns * unicornChanceRatio / 2; // unicorns per second per riftChance
-            var ups = 5 * game.getResourcePerTick('unicorns') / (1 + game.getEffect("unicornsRatioReligion"));
+            var ups = 5 * game.getResourcePerTick('unicorns') / (1 + game.getEffect('unicornsRatioReligion'));
             // Constants for Ivory Meteors
-            var meteorChance = game.getEffect("ivoryMeteorChance") * unicornChanceRatio / 2;
-            var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect("ivoryMeteorRatio"));
+            var meteorChance = game.getEffect('ivoryMeteorChance') * unicornChanceRatio / 2;
+            var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect('ivoryMeteorRatio'));
 
             // find which is the best value
             var buttons = game.religionTab.zgUpgradeButtons;
@@ -1101,7 +1101,7 @@ SK.Tasks = class {
                 if (otherCosts) {
                     var unicorns = game.resPool.get('unicorns').value;
                     var tears = game.resPool.get('tears').value;
-                    var zigs = game.bld.get("ziggurat").on;
+                    var zigs = game.bld.get('ziggurat').on;
                     var available = tears + Math.floor(unicorns / 2500) * zigs;
                     if (available > tearCost) {
                         if (tears < tearCost) {
@@ -1123,7 +1123,7 @@ SK.Tasks = class {
 
     // Auto buys and sells bcoins optimally (not yet tested)
     autoBCoin(ticksPerCycle) {
-        if (this.model.auto.bcoin && game.science.get("antimatter").researched) {
+        if (this.model.auto.bcoin && game.science.get('antimatter').researched) {
             // When the price is > 1100 it loses 20-30% of its value
             // 880+ε is the highest it could be after an implosion
             if (game.calendar.cryptoPrice < 1095) {
@@ -1256,8 +1256,8 @@ var sk;
 if (game && game.bld) {
     sk = new SK();
 } else { // we were loaded before the game was, wait for it.
-    dojo.subscribe("game/start", function(){ sk = new SK()});
+    dojo.subscribe('game/start', function(){ sk = new SK()});
 }
 
-// XXX this is how to
-LCstorage["net.sagefault.scriptkittens.state"];
+// XXX this is how to save/load data
+LCstorage['net.sagefault.scriptkittens.state'];
