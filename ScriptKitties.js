@@ -465,8 +465,8 @@ SK.Tasks = class {
 
     singleBuild(building) {
         var built = false;
-        for (button of game.bldTab.buttons) {
-            if (button.model.metadata.name != building) continue;
+        for (var button of game.bldTab.buttons) {
+            if (button.model.metadata?.name != building) continue;
             if (button.model.enabled) {
                 button.controller.buyItem(button.model, {}, function(result) {
                     if (result) {built = true; button.update();}
@@ -609,7 +609,7 @@ SK.Tasks = class {
             for (var planet of game.spaceTab.planetPanels) {
                 for (var spBuild of planet.children) {
                     if (sb[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked
-                            && (!sb[name].limit || sbBuild.model.metadata.val < sb[name].limit)) {
+                            && (!sb[spBuild.id].limit || spBuild.model.metadata.val < sb[spBuild.id].limit)) {
                         // .enabled doesn't update automatically unless the tab is active, force it
                         if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                         if (spBuild.model.enabled) {
@@ -655,7 +655,7 @@ SK.Tasks = class {
                 if (buttons) {
                     for (var button of buttons) {
                         if (tb[button.id]?.enabled && button.model.metadata.unlocked
-                                && (!tb[name].limit || button.model.metadata.val < tb[name].limit)) {
+                                && (!tb[button.id].limit || button.model.metadata.val < tb[button.id].limit)) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
                                 button.controller.buyItem(button.model, {}, function(result) {
@@ -1156,7 +1156,7 @@ SK.Tasks = class {
 
     autoPlay(ticksPerCycle) {
         if (this.model.auto.play) {
-            this.script.run(this.model.option.playscript);
+            this.scripts.run(this.model.option.playscript);
         }
     }
 }
@@ -1182,15 +1182,18 @@ SK.Scripts = class {
     }
 
     run(script) {
+        if (this.state.length == 0) return;
+
         // prep
         var oldTab = game.ui.activeTabId;
         var oldConfirm = game.ui.confirm; // for policies and building upgrades
-        game.ui.confirm = alwaysYes;
+        game.ui.confirm = this.alwaysYes;
 
         // action
-        var action = state.shift();
+        var action = this.state.shift();
+        console.log(`Doing ${action}, remaining ${this.state}`);
         var done = this[script](action);
-        if (!done) state.push(action);
+        if (!done) this.state.push(action);
 
         // cleanup
         game.ui.activeTabId = oldTab;
@@ -1205,7 +1208,7 @@ SK.Scripts = class {
     startup(action) {
         // XXX TODO: Fix Cryochambers
         switch(action) {
-            case 'init': // -> workshop-start, science-start
+            case 'init': // -> workshop-start, science-start, trade-start
                 this.model.auto.bcoin = true;
                 this.model.auto.explore = true;
                 this.model.auto.party = true;
@@ -1216,21 +1219,14 @@ SK.Scripts = class {
                 this.model.minor.praiseAfter = true;
                 this.state.push('workshop-start');
                 this.state.push('science-start');
+                this.state.push('trade-start');
                 return true;
 
-            case 'workshop-start': // -> workshop-end
+            case 'workshop-start': // -|
                 if (game.bld.get('workshop').val != 0 || sk.tasks.singleBuild('workshop')) {
                     game.ui.activeTabId = 'Workshop';
                     game.render();
                     this.model.auto.workshop = true;
-                    this.state.push('workshop-end');
-                    return true;
-                }
-                return false;
-
-            case 'workshop-end': // -|
-                if (game.getEffect('hunterRatio') > 4) {
-                    this.model.auto.hunt = true;
                     return true;
                 }
                 return false;
@@ -1252,7 +1248,7 @@ SK.Scripts = class {
                     'superconductors',
                     'thorium',
                 ];
-                for (var tech in requiredTechs) {
+                for (var tech of requiredTechs) {
                     if (game.science.get(tech).researched == false) return false;
                 }
                 this.model.auto.research = false;
@@ -1263,12 +1259,12 @@ SK.Scripts = class {
                 return true;
 
             case 'science-end': // -|
-                // buy remaining Sciences, excluding Blackchain
-                var bannedTech = 'blackchain'
+                // buy remaining Sciences, excluding Blackchain (Brewery isn't a real tech)
+                var bannedTech = ['blackchain', 'brewery'];
                 var done = true;
                 for (var button of game.libraryTab.buttons) {
                     if (button.model.metadata.researched == true) continue;
-                    if (button.model.metadata.name == 'blackchain') continue;
+                    if (bannedTech.includes(button.model.metadata.name)) continue;
                     if (button.model.metadata.unlocked == false) {
                         done = false;
                         continue;
@@ -1294,14 +1290,16 @@ SK.Scripts = class {
                     'steamworks':120,
                     'ziggurat':100,
                 };
-                for (bname in cathBuildings) {
+                for (var bname in this.model.cathBuildings) {
                     if (bname == 'aiCore' || bname.slice(0,5) == 'zebra') continue;
-                    cathBuildings[bname].enabled = true;
+                    this.model.cathBuildings[bname].enabled = true;
                 }
-                for (bname in climit) cathBuildings[bname].limit = climit[bname];
+                for (var bname in climit) this.model.cathBuildings[bname].limit = climit[bname];
                 /** upgrade all buildings **/
                 for (var button of game.bldTab.buttons) {
-                    if (button.controller.upgrade) button.controller.upgrade(button.model);
+                    if (button.controller.upgrade && button.model.metadata.stage < button.model.metadata.stages.length - 1) {
+                        button.controller.upgrade(button.model);
+                    }
                 }
                 //
                 /** space **/
@@ -1312,13 +1310,13 @@ SK.Scripts = class {
                     'cryostation', 'spaceBeacon', 'entangler',
                     'terraformingStation', 'tectonic', 'moltenCore',
                 ];
-                for (bname of space) spaceBuildings[bname].enabled = true;
+                for (var bname of space) this.model.spaceBuildings[bname].enabled = true;
                 var slimit = { 'containmentChamber':5, 'heatsink':50, }
-                for (bname in slimit) spaceBuildings[bname].limit = slimit[bname];
+                for (var bname in slimit) this.model.spaceBuildings[bname].limit = slimit[bname];
                 //
                 /** time **/
                 var time = [ 'marker', 'blackPyramid', ];
-                for (bname of time) timeBuildings[bname].enabled = true;
+                for (var bname of time) this.model.timeBuildings[bname].enabled = true;
                 this.model.auto.build = true;
                 /** children **/
                 game.ui.activeTabId = 'Religion'; game.render();
@@ -1336,7 +1334,7 @@ SK.Scripts = class {
                     break;
                 }
                 var lateSpace = ['spaceElevator', 'orbitalArray', 'hydroponics'];
-                for (bname of lateSpace) spaceBuildings[bname].enabled = true;
+                for (var bname of lateSpace) this.model.spaceBuildings[bname].enabled = true;
                 this.model.auto.craft = true;
                 this.state.push('time-start');
                 return true;
@@ -1344,9 +1342,9 @@ SK.Scripts = class {
             case 'religion': // -> assign
                 var done = false;
                 for (var button of game.religionTab.rUpgradeButtons) {
-                    if (button.model.name != 'solarRevolution') continue;
+                    if (button.model.metadata.name != 'solarRevolution') continue;
                     if (! button.model.visible) continue;
-                    if (button.model.metadata.researched) {
+                    if (button.model.metadata.val > 0) {
                         // someone got to it already
                         done = true;
                     } else {
@@ -1359,8 +1357,10 @@ SK.Scripts = class {
                     }
                     break;
                 }
-                if (done) this.model.auto.religion = true;
-                this.state.push('assign');
+                if (done) {
+                    this.model.auto.religion = true;
+                    this.state.push('assign');
+                }
                 return done;
 
             case 'steamworks': // -|
@@ -1372,7 +1372,7 @@ SK.Scripts = class {
                     return false;
                 }
 
-            case 'policy': // -> embassy-start
+            case 'policy': // -|
                 var chosen = [
                     'liberty', 'republic', 'liberalism',
                     'diplomacy', 'culturalExchange', 'zebraRelationsBellicosity',
@@ -1396,24 +1396,27 @@ SK.Scripts = class {
                     }
                 }
                 var done = (researched == chosen.length);
-                if (done) this.state.push('embassy-start');
                 return done;
 
             case 'assign': // -|
-                if (game.village.getFreeKittens() > 0) {
+                if (game.village.getFreeKittens() > 0 || game.village.leader.job) {
                     game.village.assignJob(game.village.getJob('priest'), 1); // assign leader
                     this.model.auto.assign = true;
                     return true;
                 }
                 return false;
 
-            case 'embassy-start': // -> embassy-mid
-                game.ui.activeTabId = 'Trade';
-                game.render();
-                this.state.push('embassy-mid');
-                return true;
+            case 'trade-start': // -> trade-zebras, trade-hunt
+                if (game.diplomacyTab.visible) {
+                    game.ui.activeTabId = 'Trade';
+                    game.render();
+                    this.state.push('trade-zebras');
+                    this.state.push('trade-hunt');
+                    return true;
+                }
+                return false;
 
-            case 'embassy-mid': // -|
+            case 'trade-zebras': // -|
                 for (var panel of game.diplomacyTab.racePanels) {
                     if (panel.race.name != 'zebras') continue;
                     var button = panel.embassyButton;
@@ -1429,7 +1432,16 @@ SK.Scripts = class {
                 }
                 return false;
 
-            case 'time-start': // -> time-mid
+            case 'trade-hunt': // -|
+                if (game.getEffect('hunterRatio') > 4
+                        && game.calendar.festivalDays >= 400*10
+                        && game.diplomacy.get('zebras').unlocked) {
+                    this.model.auto.hunt = true;
+                    return true;
+                }
+                return false;
+
+            case 'time-start': // |-> time-mid
                 if (this.state.length != 0) return false; // wait until all other reqs are satisfied
                 var tlimit = {
                     'temporalBattery':30,
@@ -1438,9 +1450,9 @@ SK.Scripts = class {
                     'ressourceRetrieval':20,
                     'chronocontrol':1
                 };
-                for (bname in tlimit) {
-                    spaceBuildings[bname].limit = tlimit[bname];
-                    spaceBuildings[bname].enabled = true;
+                for (var bname in tlimit) {
+                    this.model.timeBuildings[bname].limit = tlimit[bname];
+                    this.model.timeBuildings[bname].enabled = true;
                 }
                 this.state.push('time-end');
                 return true;
@@ -1457,6 +1469,7 @@ SK.Scripts = class {
 
             default:
                 this.model.auto.play = false;
+                console.log(`CRITICAL: unrecognized state ${action}`);
                 game.msg(`CRITICAL: unrecognized state ${action}`);
                 return false;
 
