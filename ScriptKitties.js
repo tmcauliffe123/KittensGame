@@ -79,7 +79,7 @@ SK.Model = class {
     populateDataStructures() {
         // Building lists for controlling Auto Build/Space/Time
         this.cathBuildings = {/* list is auto-generated, looks like:
-            field:{name:'Catnip Field', enabled:false},
+            field:{label:'Catnip Field', enabled:false},
             ...
         */};
         this.cathGroups = [/*
@@ -92,7 +92,7 @@ SK.Model = class {
         }
 
         this.spaceBuildings = {/*
-            spaceElevator:{name:'Space Elevator', enabled:false},
+            spaceElevator:{label:'Space Elevator', enabled:false},
             ...
         */};
         this.spaceGroups = [/*
@@ -124,7 +124,7 @@ SK.Model = class {
             if (buildings==game.religion.zigguratUpgrades && building.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
             var label = building.stages?.map(function(x){return x.label}).join(' / '); // for 'Library / Data Center', etc
             label ||= building.label;
-            dict[building.name] = {name:label, enabled:false};
+            dict[building.name] = {label:label, enabled:false};
             group.push(building.name);
         }
         return group;
@@ -270,11 +270,9 @@ SK.Gui = class {
             menu += `<input type="checkbox" id="SK_${lab}Checker" class="SK_${tab}Check" onchange="sk.gui.selectChildren('SK_${lab}Checker','SK_${lab}Check');">`;
             menu += `<label for="SK_${lab}Checker"><b>${label}</b></label><br>\n`;
 
-            for (var j = 0; j < group[1].length; j++) {
-                var bld = group[1][j];
-                var bldLabel = this.model[elementsName][bld].name;
+            for (var bld of group[1]) {
                 menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.model.${elementsName}.${bld}.enabled=this.checked">`;
-                menu += `<label style="padding-left:10px;" for="SK_${bld}">${bldLabel}</label><br>\n`;
+                menu += `<label style="padding-left:10px;" for="SK_${bld}">${this.model[elementsName][bld].label}</label><br>\n`;
             }
             menu += '</p>\n';
         }
@@ -413,6 +411,7 @@ SK.Tasks = class {
     }
 
     taskRunner() {
+        if (game.isPaused) return; // we pause too
         var ticks = game.timer.ticksTotal;
         for (var task of this.schedule) {
             if (task.override || ticks % task.interval == task.offset) {
@@ -754,11 +753,11 @@ SK.Tasks = class {
             } else if (this.model.power.oilWell.val > this.model.power.oilWell.on && proVar > (conVar + 3)) {
                 this.model.power.oilWell.on++;
                 conVar++;
-            } else if (this.model.power.bioLab.val > this.model.power.bioLab.on && proVar > (conVar + 3)) {
-                this.model.power.bioLab.on++;
+            } else if (this.model.power.biolab.val > this.model.power.biolab.on && proVar > (conVar + 3)) {
+                this.model.power.biolab.on++;
                 conVar++;
-            } else if (this.model.power.bioLab.on > 0 && proVar < conVar) {
-                this.model.power.bioLab.on--;
+            } else if (this.model.power.biolab.on > 0 && proVar < conVar) {
+                this.model.power.biolab.on--;
                 conVar--;
             } else if (this.model.power.oilWell.on > 0 && proVar < conVar) {
                 this.model.power.oilWell.on--;
@@ -936,13 +935,12 @@ SK.Tasks = class {
         var bought = false;
         if (this.model.auto.religion && game.religionTab.visible) {
             for (var button of game.religionTab.rUpgradeButtons) {
-                if (button.model.visible && button.model.metadata.researched != true) {
-                    if ( ! button.model.enabled) button.update();
-                    if (button.model.enabled) {
-                        button.controller.buyItem(button.model, {}, function(result) {
-                            if (result) { bought = true; button.update(); }
-                        });
-                    }
+                if (button.model.metadata.researched) continue;
+                if ( ! button.model.enabled) button.update();
+                if (button.model.enabled) {
+                    button.controller.buyItem(button.model, {}, function(result) {
+                        if (result) { bought = true; button.update(); }
+                    });
                 }
             }
             var faith = game.resPool.get('faith');
@@ -1192,12 +1190,12 @@ SK.Tasks = class {
 
     // Auto buys and sells bcoins optimally
     autoBCoin(ticksPerCycle) {
-        if (this.model.auto.bcoin && game.diplomacy.get('leviathans').unlocked) {
-            // When the price is > 1100 it loses 20-30% of its value
-            // 880+ε is the highest it could be after an implosion
-            // XXX I think this code might be cheating.
-            // XXX TEST: disable this, sell out, displease elders, wait for them to return, see if I can buy
-            if (game.calendar.cryptoPrice < 1095) {
+        // When the price is > 1100 it loses 20-30% of its value
+        // 880+ε is the highest it could be after an implosion
+        if (this.model.auto.bcoin && game.diplomacy.get('leviathans').unlocked && game.resPool.get('relic').value > 0) {
+            var eldersPanel = game.diplomacyTab.racePanels.find(function(p){return p.race.name == 'leviathans'});
+            if (! eldersPanel || ! eldersPanel.buyBcoin) return false;
+            if (game.calendar.cryptoPrice < 1090) {
                 game.diplomacy.buyBcoin();
             } else if (game.resPool.get('blackcoin').value > 0) {
                 game.diplomacy.sellBcoin();
@@ -1228,9 +1226,11 @@ SK.Tasks = class {
 
     fixCryochamber() {
         var button = game.timeTab.vsPanel.children[0].children[0];
-        button.controller.buyItem(button.model, {}, function(result) {
-            if (result) button.update();
-        });
+        if (button.model) {
+            button.controller.buyItem(button.model, {}, function(result) {
+                if (result) button.update();
+            });
+        }
     }
 
     autoPlay(ticksPerCycle) {
@@ -1251,7 +1251,7 @@ SK.Scripts = class {
     }
 
     static listScripts() {
-        return [
+        return [ // format is chosen to match things like game.calendar.cycles
             {name:'test',        title:'Test Script'},
             {name:'startup',     title:'Post Chrono Setup'},
             {name:'fastParagon', title:'Fast Reset'},
