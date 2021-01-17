@@ -24,22 +24,6 @@ SK.Model = class {
         // Is a toggle holder. Use like ``auto.craft = true; if (auto.craft) { ...
         this.auto = {};
 
-        // These control the selections under [Minor Options]
-        this.minor = {
-            observe:true,
-            conserveRare:true,
-        };
-        this.minorNames = {
-            program:'Space Programs',
-            observe:'Auto Observe',
-            feed:'Auto Feed Elders',
-            promote:'Auto Promote Leader',
-            wait4void:'Only Shatter at Season Start',
-            praiseAfter:'Praise After Religion',
-            unicornIvory:'Unicorn Ivory Optimization',
-            conserveRare:'Conserve Rare Resources',
-        };
-
         // These are the assorted variables
         this.books = ['parchment', 'manuscript', 'compedium', 'blueprint'];
         this.option = {
@@ -51,6 +35,22 @@ SK.Model = class {
             script:'none',
         };
 
+        // These control the selections under [Minor Options]
+        this.minor = {
+            observe:true,
+            conserveExotic:true,
+        };
+        this.minorNames = {
+            program:'Space Programs',
+            observe:'Auto Observe',
+            feed:'Auto Feed Elders',
+            promote:'Auto Promote Leader',
+            wait4void:'Only Shatter at Season Start',
+            praiseAfter:'Praise After Religion',
+            unicornIvory:'Unicorn Ivory Optimization',
+            conserveExotic:'Conserve Exotic Resources',
+        };
+
         // These will allow quick selection of the buildings which consume energy
         this.power = {};
         for (var b of ['biolab', 'oilWell', 'factory', 'calciner', 'accelerator']) {
@@ -58,16 +58,13 @@ SK.Model = class {
         }
 
         // Note: per game: uncommon==luxuries==(trade goods), rare==unicorns+karma, exotic==relics+void+bc+bs
-        this.rareResources = [
-            'antimatter',
+        this.exoticResources = [
+            'antimatter', // how is AM not exotic?
             'blackcoin',
-            'eludium',
-            'relic',
-            'temporalFlux',
-            'timeCrystal',
-            'unobtainium',
-            'void',
             'bloodstone',
+            'relic',
+            'temporalFlux', // honorary
+            'void',
         ];
 
         this.populateDataStructures();
@@ -828,7 +825,7 @@ SK.Tasks = class {
                 var cost = 0;
                 for (var price of button.model.prices) {
                     if (price.name == 'science') cost = price.val;
-                    if (this.model.minor.conserveRare && this.model.rareResources.includes(price.name)) {
+                    if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
                         continue techloop;
                     }
                 }
@@ -860,7 +857,7 @@ SK.Tasks = class {
                 var cost = 0;
                 for (var price of button.model.prices) {
                     if (price.name == 'science') cost = price.val;
-                    if (this.model.minor.conserveRare && this.model.rareResources.includes(price.name)) {
+                    if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
                         continue workloop;
                     }
                 }
