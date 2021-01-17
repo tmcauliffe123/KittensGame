@@ -334,13 +334,21 @@ SK.Gui = class {
     }
 
     refresh() {
-        for (var auto in sk.model.auto) {
+        for (var auto in this.model.auto) {
             var element = this.switches[auto];
             $('#'+element).toggleClass('disabled', !this.model.auto[auto])
         }
-        for (var option in sk.model.option) {
+        for (var option in this.model.option) {
             var element = this.dropdowns[option];
             $('#'+element).val(this.model.option[option]);
+        }
+        for (var minor in this.model.minor) {
+            $('#SK_'+minor).prop('checked', this.model.minor[minor]);
+        }
+        for (var menu of ['cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+            for (var entry in this.model[menu]) {
+                $('#SK_'+entry).prop('checked', this.model[menu][entry].enabled);
+            }
         }
     }
 }
@@ -419,6 +427,51 @@ SK.Tasks = class {
         var numberKittens = game.resPool.get('kittens').value;
         var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
         game.msg('Your current efficiency is ' + parseFloat(curEfficiency).toFixed(2) + ' Paragon per hour.');
+    }
+
+    energyReport() {
+        // TODO solar panels
+        // "solarFarmRatio" -- PV is 0.5
+        // "summerSolarFarmRatio" -- challenge: 0.05
+        // "solarFarmSeasonRatio" -- thinFilm:1, qdot:1
+        // game.bld.getBuildingExt("pasture").get("calculateEnergyProduction")(game, currentSeason)
+        //      - base: 2, 3 with PV
+        //      0. spring: 1.00 * sFSR:{1,1,1.30}
+        //      1. summer: 1.33 * (summer)
+        //      2. autumn: 1.00 * sFSR:{1,1,1.30}
+        //      3. winter: 0.75 * sFSR:{1, 1.15, 1.30}
+        // Looks like:
+        //  season 3: no change
+        //
+        //
+        //
+        var total = {};
+        for (var effect of ['energyProduction', 'energyConsumption']) {
+            var sign = effect == 'energyProduction' ? '+' : '-';
+            total[effect] = 0;
+            for (source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
+                for (shim of source) {
+                    shim = shim.buildings ? shim.buildings : [shim]
+                    for (building of shim) {
+                        var stage = building.stage ? building.stages[building.stage] : building;
+                        if (! stage.effects || building.val == 0) continue;
+                        var eper = stage.effects[effect];
+                        if (building.name == 'pasture' && effect == 'energyProduction') {
+                            // deal with Solar Farms. Peak is in summer(1), Low in winter(3). Report low, mention high.
+                            var cep = building.stages[building.stage].calculateEnergyProduction;
+                            eper = cep(game, 3);
+                            total.summer = (cep(game, 1) - eper) * building.on;
+                        }
+                        if (eper) {
+                            console.log(`${stage.label} (${building.on}/${building.val}): ${sign}${eper * building.on}`);
+                            total[effect] += eper * building.on;
+                        }
+                    }
+                }
+            }
+        }
+        console.log(total);
+        return total;
     }
 
     /*** Individual Auto Scripts start here ***/
