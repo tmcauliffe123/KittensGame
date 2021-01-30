@@ -271,7 +271,7 @@ SK.Gui = class {
             menu += `<label for="SK_${lab}Checker"><b>${label}</b></label><br>\n`;
 
             for (var bld of group[1]) {
-                menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.model.${elementsName}.${bld}.enabled=this.checked">`;
+                menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.model.${elementsName}.${bld}.enabled=this.checked; sk.model.${elementsName}.${bld}.limit=false">`;
                 menu += `<label style="padding-left:10px;" for="SK_${bld}">${this.model[elementsName][bld].label}</label><br>\n`;
             }
             menu += '</p>\n';
@@ -576,6 +576,8 @@ SK.Tasks = class {
                         }
                     } else if (this.model.books.includes(output) && this.model.option.book != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
+                        var outputIndex = this.model.books.indexOf(output);
+                        var choiceIndex = this.model.books.indexOf(this.model.option.bookChoice);
                         if (outputIndex > choiceIndex) craftCount = 0;
                     } else {
                         // secondary resource: general
@@ -697,6 +699,7 @@ SK.Tasks = class {
                 game.timeTab?.vsPanel?.children[0]?.children
             ];
 
+            // TODO: special case for Markers and Tears
             var tb = this.model.timeBuildings;
             for (var buttons of buttonGroups) {
                 if (buttons) {
@@ -943,6 +946,7 @@ SK.Tasks = class {
                     });
                 }
             }
+            // TODO: when we don't have enough gold, this can prematurely engage
             var faith = game.resPool.get('faith');
             if (this.model.minor.praiseAfter && bought == false && faith.value >= faith.maxValue) {
                 if (! this.model.auto.praise) sk.gui.autoSwitch('praise', 'SK_autoPraise');
@@ -962,6 +966,7 @@ SK.Tasks = class {
             var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
             var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
 
+            // TODO: capping gold can take too long, use SRS to compensate
             if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
                 var tiRes = game.resPool.get('titanium');
                 var unoRes = game.resPool.get('unobtainium');
@@ -1053,8 +1058,9 @@ SK.Tasks = class {
 
     // Build Embassies automatically
     autoEmbassy(ticksPerCycle) {
+        // TODO: something in this function is damaging responsiveness
         var built = false;
-        if (this.model.auto.embassy && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
+        if (this.model.auto.embassy && game.science.get("writing").researched && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
             var culture = game.resPool.get('culture');
             if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
                 var panels = game.diplomacyTab.racePanels;
@@ -1220,6 +1226,11 @@ SK.Tasks = class {
             } else {
                 game.time.isAccelerated = false;
             }
+            this.model.managedFugit = game.time.isAccelerated;
+        } else if (this.model.managedFugit) {
+            // if it was turned off while Fugit was on, turn off Fugit
+            game.time.isAccelerated = false;
+            this.model.managedFugit = false;
         }
         return false;
     }
@@ -1385,7 +1396,7 @@ SK.Scripts = class {
                     'aiCore':60,
                 };
                 for (var bname in this.model.cathBuildings) {
-                    if (bname == 'aiCore' || bname.slice(0,5) == 'zebra') continue;
+                    if (bname.slice(0,5) == 'zebra') continue;
                     this.model.cathBuildings[bname].enabled = true;
                 }
                 for (var bname in climit) this.model.cathBuildings[bname].limit = climit[bname];
