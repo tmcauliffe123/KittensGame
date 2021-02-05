@@ -473,6 +473,69 @@ SK.Tasks = class {
         return total;
     }
 
+    ensureContentExists(tabId) {
+        // only work for visible tabs
+        var tab = game.tabs.find(function(tab){return tab.tabId==tabId});
+        if (! tab.visible) return false;
+
+        var doRender = false;
+        switch(tabId) {
+            case 'Science':
+                doRender = (tab.buttons.length == 0 || ! tab.policyPanel);
+                break;
+            case 'Workshop':
+                doRender = (tab.buttons.length == 0);
+                break;
+            case 'Trade':
+                doRender = (tab.racePanels.length == 0 || ! tab.exploreBtn);
+                break;
+            case 'Religion':
+                doRender = (tab.zgUpgradeButtons.length == 0 && game.bld.get('ziggurat').on > 0
+                    || tab.rUpgradeButtons.length == 0 && !game.challenges.isActive("atheism"));
+                // ctPanel is set during constructor, if it's not there we're pooched
+                break;
+            case 'Space':
+                // XXX FAILED. Did NOT proc.
+                // TODO TEST THIS, especially GCPanel
+                doRender = (! tab.planetPanels || ! tab.GCPanel);
+                if (tab.planetPanels) {
+                    var planetCount = 0
+                    for (var planet of game.space.planets) {
+                        if (planet.unlocked) planetCount += 1;
+                    }
+                    doRender ||= tab.planetPanels.length < planetCount;
+                }
+                break;
+            case 'Time':
+                doRender = (! tab.cfPanel.children[0].children[0].model || ! tab.vsPanel.children[0].children[0].model);
+                // both cfPanel and vsPanel are created in constructor.
+                break;
+            default:
+                console.error(`ensureContentExists(${tab}) isn't handled.`);
+                break;
+        }
+
+        if (doRender) {
+            // create and get DOM element
+            var div = $(`div.tabInner.${tabId}`)[0];
+            var oldTab = null;
+            if (! div) {
+                oldTab = game.ui.activeTabId;
+                game.ui.activeTabId = tabId;
+                game.ui.render();
+                div = $(`div.tabInner.${tabId}`)[0];
+            }
+
+            tab.render(div);
+            console.log(`[DEBUG] rendering children of ${tabId}`);
+
+            if (oldTab) {
+                game.ui.activeTabId = oldTab;
+                game.ui.render();
+            }
+        }
+    }
+
     /*** Individual Auto Scripts start here ***/
     /*** These scripts run every tick ***/
 
@@ -550,7 +613,7 @@ SK.Tasks = class {
         // TODO: We need a special case for catnip->wood.
         // In particular, we need to only craft wood if there's room
         // AND we need to make room by crafting
-        if (this.model.auto.craft) {
+        if (this.model.auto.craft && game.workshopTab.visible) {
             for (var res of game.workshop.crafts) {
                 var output = res.name;
                 var inputs = res.prices;
@@ -638,7 +701,7 @@ SK.Tasks = class {
 
     // Hunt automatically
     autoHunt(ticksPerCycle) {
-        if (this.model.auto.hunt) {
+        if (this.model.auto.hunt && game.villageTab.visible) {
             var catpower = game.resPool.get('manpower');
             if (catpower.value > (catpower.maxValue - 1)) {
                 game.village.huntAll();
@@ -652,7 +715,9 @@ SK.Tasks = class {
     // Build space stuff automatically
     autoSpace(ticksPerCycle) {
         var built = false;
-        if (this.model.auto.build && game.spaceTab && game.spaceTab.planetPanels) {
+        if (this.model.auto.build && game.spaceTab.visible) {
+            this.ensureContentExists('Space');
+
             // Build space buildings
             var sb = this.model.spaceBuildings;
             for (var planet of game.spaceTab.planetPanels) {
@@ -672,7 +737,8 @@ SK.Tasks = class {
         }
 
         // Build space programs
-        if (this.model.minor.program && game.spaceTab && game.spaceTab.GCPanel) {
+        if (this.model.minor.program && game.spaceTab.visible) {
+            this.ensureContentExists('Space');
             for (var program of game.spaceTab.GCPanel.children) {
                 if (program.model.metadata.unlocked && program.model.on == 0) {
                     if (! program.model.enabled) program.controller.updateEnabled(program.model);
@@ -698,6 +764,8 @@ SK.Tasks = class {
                 game.timeTab?.cfPanel?.children[0]?.children,
                 game.timeTab?.vsPanel?.children[0]?.children
             ];
+            this.ensureContentExists('Religion');
+            this.ensureContentExists('Time');
 
             // TODO: special case for Markers and Tears
             var tb = this.model.timeBuildings;
@@ -722,7 +790,7 @@ SK.Tasks = class {
 
     // Festival automatically
     autoParty(ticksPerCycle) {
-        if (this.model.auto.party && game.science.get('drama').researched) {
+        if (this.model.auto.party && game.science.get('drama').researched && game.villageTab.visible) {
             var catpower = game.resPool.get('manpower').value;
             var culture = game.resPool.get('culture').value;
             var parchment = game.resPool.get('parchment').value;
@@ -971,6 +1039,7 @@ SK.Tasks = class {
     autoResearch(ticksPerCycle) {
         var acted = false;
         if (this.model.auto.research && game.libraryTab.visible) {
+            this.ensureContentExists('Science');
             var science = game.resPool.get('science').value;
             var bestButton = null;
             var bestCost = Infinity;
@@ -1003,6 +1072,7 @@ SK.Tasks = class {
     autoWorkshop(ticksPerCycle) {
         var acted = false;
         if (this.model.auto.workshop && game.workshopTab.visible) {
+            this.ensureContentExists('Workshop');
             var science = game.resPool.get('science').value;
             var bestButton = null;
             var bestCost = Infinity;
@@ -1035,6 +1105,8 @@ SK.Tasks = class {
     autoReligion(ticksPerCycle) {
         var bought = false;
         if (this.model.auto.religion && game.religionTab.visible) {
+            this.ensureContentExists('Religion');
+
             for (var button of game.religionTab.rUpgradeButtons) {
                 if (button.model.metadata.researched) continue;
                 if ( ! button.model.enabled) button.update();
@@ -1056,7 +1128,7 @@ SK.Tasks = class {
     // Trade automatically
     autoTrade(ticksPerCycle) {
         var traded = false;
-        if (this.model.auto.trade) {
+        if (this.model.auto.trade && game.diplomacyTab.visible) {
             var goldResource = game.resPool.get('gold');
             var goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
             var powerResource = game.resPool.get('manpower');
@@ -1183,6 +1255,8 @@ SK.Tasks = class {
     autoExplore(ticksPerCycle) {
         var available = false;
         if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get('manpower').value >= 1000) {
+            this.ensureContentExists('Trade');
+
             for (var race of game.diplomacy.races) {
                 if (race.unlocked) continue;
                 switch(race.name) {
@@ -1208,10 +1282,13 @@ SK.Tasks = class {
                 }
                 if (available) break;
             }
-            if (available && game.diplomacyTab.exploreBtn) {
+            if (available) {
                 var button = game.diplomacyTab.exploreBtn;
                 button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {available = true; button.update();}
+                    if (result) {
+                        available = true;
+                        game.diplomacyTab.render($('div.tabInner.Trade')[0]); // create race panel
+                    }
                 });
             }
         }
@@ -1222,6 +1299,8 @@ SK.Tasks = class {
     autoUnicorn(ticksPerCycle) {
         var acted = false;
         if (this.model.auto.unicorn && game.religionTab.visible) {
+            this.ensureContentExists('Religion');
+
             /* About Unicorn Rifts
              * Each Tower causes a 0.05% chance for a rift per game-day
              * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
@@ -1310,7 +1389,7 @@ SK.Tasks = class {
 
     // Automatically use flux for fixing CCs and tempus fugit
     autoFlux(ticksPerCycle) {
-        if (this.model.auto.flux) {
+        if (this.model.auto.flux && game.timeTab.visible) {
             var flux = game.resPool.get('temporalFlux').value;
             var reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
             var fixcost = 3000;
@@ -1373,7 +1452,6 @@ SK.Scripts = class {
         if (this.state.length == 0) return;
 
         // prep
-        var oldTab = game.ui.activeTabId;
         var oldConfirm = game.ui.confirm; // for policies and building upgrades
         game.ui.confirm = this.alwaysYes;
 
@@ -1388,10 +1466,6 @@ SK.Scripts = class {
         }
 
         // cleanup
-        if (game.ui.activeTabId != oldTab) {
-            game.ui.activeTabId = oldTab;
-            game.render();
-        }
         if (action != 'init') { // init is allowed to change tab
             game.ui.confirm = oldConfirm;
         }
