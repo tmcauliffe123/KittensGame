@@ -781,86 +781,184 @@ SK.Tasks = class {
 
     /*** These scripts run every 4 seconds ***/
 
+    smartAssign() {
+        if (game.calendar.day < 0) return false; // temporal paradox messes up the cache
+        var limits={};
+        var kittens = game.village.getKittens();
+        var fugit = game.time.isAccelerated ? 1.5 : 1;
+
+        // Default Job Ratio. Will try to aim for this.
+        var jobRatio = {
+            'farmer':    0.05,
+            'woodcutter':0.20,
+            'miner':     0.20,
+            'geologist': 0.20,
+            'hunter':    0.15,
+            'scholar':   0.10,
+            'priest':    0.10,
+        };
+
+        // first calculate (and enforce) "hard" limits:
+        for (var job of game.village.jobs) {
+            // We need a better way of finding out what a kitten produces in each job
+            var res = null;
+            var ticksToFull = null;
+            if (job.value === 0) continue; // can't calculate
+            switch(job.name) {
+                case 'farmer':
+                    // no limit.
+                    break;
+                case 'woodcutter':
+                    res = game.resPool.get('wood');
+                    ticksToFull = 3; // Limit production to what autoCraft can consume
+                    break;
+                case 'miner':
+                    res = game.resPool.get('minerals');
+                    ticksToFull = 3; // As Lumbercats
+                    break;
+                case 'geologist':
+                    var ironPerTick = game.resPool.get('iron').perTickCached;
+                    var coalPerTick = game.resPool.get('coal').perTickCached;
+                    limits[job.name] = Math.round((ironPerTick * (2 / 3) / coalPerTick) * job.value);
+                    break;
+                case 'hunter':
+                    res = game.resPool.get('manpower');
+                    if (!sk.model.auto.hunt && res.value >= res.maxValue) limits[job.name] = 1;
+                    else ticksToFull = 10;
+                    break;
+                case 'scholar':
+                    res = game.resPool.get('science');
+                    if (res.value >= res.maxValue) limits[job.name] = 1;
+                    else ticksToFull = 20;
+                    break;
+                case 'priest':
+                    // no hard limit, excess goes here
+                    break;
+            }
+            if (res && ticksToFull) {
+                var perKittenSec = res.perTickCached * fugit * 5 / job.value;
+                if (perKittenSec > 0) {
+                    limits[job.name] = Math.round((res.maxValue / perKittenSec) / (ticksToFull / 5));
+                }
+            }
+            if (limits[job.name] && job.value > limits[job.name]) {
+                game.village.sim.removeJob(job.name, job.value - limits[job.name]);
+            }
+        }
+
+        /**
+         * As a general guideline, smartAssign should only "assign" kittens to
+         * jobs, not remove them. However, we make some exceptions:
+         *     1. (above) if there are so many in a job that resources are going to waste
+         *     2. (above) we're at science or hunting cap
+         *     3. (this) if we're starving, or a job has less than half expected
+         *         - this last point means the player the player can't allocate more than ~60%
+         * Note: assignJob and removeJob are fairly slow functions, because
+         * they try to "optimize" kittens, (which mostly means adding the most
+         * skilled and removing the least skilled) so we try to batch assign/remove.
+         **/
+
+        // find jobs with less than half target
+        var needs = {};
+        for (var job of game.village.jobs) {
+            var minimum = Math.floor(jobRatio[job.name] * kittens / 2);
+            if (limits[job.name]) minimum = Math.min(minimum, limits[job.name]);
+            if (job.value < minimum) needs[job.name] = minimum - job.value;
+            if (job.name === 'farmer' && game.resPool.get('catnip').perTickCached < 0) {
+                needs[job.name] ||= 1; // if we're starving, add a farmer
+            }
+        }
+
+        // try to satisfy from free kittens
+        var avails = game.village.getFreeKittens();
+        var totalNeed = 0;
+        for (var need in needs) totalNeed += needs[need];
+
+        // figure current distribution
+        var distribution = []; // [0:name, 1:count, 2:expected, 3:count/expected]
+        for (var job of game.village.jobs) {
+            if (job.value === 0) continue;
+            distribution.push([job.name, job.value, kittens * jobRatio[job.name], job.value/kittens * jobRatio[job.name]]);
+        }
+        distribution.sort(function(a,b){return b[3] - a[3];});
+
+        // allocate necessary losses to the most over-allocated
+        untilNeed: while (avails < totalNeed) {
+            for (var i=0; i<distribution.length; i+=1) {
+                if (i+1 >= distribution.length || distribution[i][3] > distribution[i+1][3]) {
+                    distribution[i][1] -= 1;
+                    distribution[i][3] = distribution[i][1] / distribution[i][2];
+                    totalNeed -= 1;
+                    continue untilNeed;
+                }
+            }
+            console.log("UH OH!");
+            break; // this should not be possible, but infinite loops are really bad
+        }
+        // lose them
+        for (var job of game.village.jobs) {
+            for (var i=0; i<distribution.length; i+=1) {
+                if (job.name !== distribution[i][0]) continue;
+                var sack = job.value - distribution[i][1];
+                if (sack > 0) {
+                    game.village.sim.removeJob(job.name, sack);
+                    avails += sack;
+                }
+            }
+        }
+
+        // do the needful
+        for (var job of game.village.jobs) {
+            var need = needs[job.name];
+            if (need) {
+                game.village.assignJob(job, need);
+                avails -= need;
+                for (var i=0; i<distribution.length; i+=1) {
+                    if (job.name !== distribution[i][0]) continue;
+                    distribution[i][1] += need;
+                    distribution[i][3] = distribution[i][1] / distribution[i][2];
+                }
+            }
+        }
+
+        // use up any remaining space
+        delete distribution['farmer'];
+        distribution.reverse();
+        distribution = distribution.filter(function(x){
+            return x[0] !== 'farmer' && (!limits[x[0]] ||  x[1] < limits[x[0]]);
+        });
+        untilAvail: while (avails > 0) {
+            for (var i=0; i<distribution.length; i+=1) {
+                if (i+1 >= distribution.length || distribution[i][3] < distribution[i+1][3]) {
+                    distribution[i][1] += 1;
+                    avails -= 1; // haven't done it yet, it's in "add them"
+                    distribution[i][3] = distribution[i][1] / distribution[i][2];
+                    if (distribution[i][1] >= limits[distribution[i][0]]) {
+                        distribution = distribution.filter(function(x){return !limits[x[0]] ||  x[1] < limits[x[0]];});
+                    }
+                    continue untilAvail;
+                }
+            }
+            console.log("UH OH!");
+            break; // this should not be possible, but infinite loops are really bad
+        }
+        // add them
+        for (var job of game.village.jobs) {
+            for (var i=0; i<distribution.length; i+=1) {
+                if (job.name !== distribution[i][0]) continue;
+                var hire = distribution[i][1] - job.value;
+                if (hire) game.village.assignJob(job, hire);
+            }
+        }
+        return false
+    }
+
     // Auto assign new kittens to selected job
     autoAssign(ticksPerCycle) {
         var assigned = false;
-        if (this.model.auto.assign) {
-            if (this.model.option.assign == 'smart') {
-                if (game.calendar.day < 0) return false;
-                var limits={};
-                var spaces={};
-                var priestJob;
-                var kittens = game.village.getKittens();
-                var fugit = game.time.isAccelerated ? 1.5 : 1;
-
-                // first calculate (and enforce) limits:
-                for (var job of game.village.jobs) {
-                    var res = null;
-                    var ticksToFull = null;
-                    switch(job.name) {
-                        case 'woodcutter':
-                            res = game.resPool.get('wood');
-                            ticksToFull = 3; // Limit production to what autoCraft can consume
-                            break;
-                        case 'farmer':
-                            limits[job.name] = Math.min(5, Math.floor(kittens/100));
-                            break;
-                        case 'scholar':
-                            res = game.resPool.get('science');
-                            ticksToFull = 20;
-                            break;
-                        case 'hunter':
-                            res = game.resPool.get('manpower');
-                            ticksToFull = 10;
-                            break;
-                        case 'miner':
-                            res = game.resPool.get('minerals');
-                            ticksToFull = 3; // As Lumbercats
-                            break;
-                        case 'priest':
-                            priestJob = job;
-                        case 'geologist':
-                            var ironPerTick = game.resPool.get('iron').perTickCached;
-                            var coalPerTick = game.resPool.get('coal').perTickCached;
-                            limits[job.name] = Math.round((ironPerTick * (2 / 3) / coalPerTick) * job.value);
-                            break;
-                    }
-                    if (res && ticksToFull) {
-                        var perKittenSec = res.perTickCached * fugit * 5 / job.value;
-                        limits[job.name] = Math.round((res.maxValue / perKittenSec) / (ticksToFull / 5));
-                    }
-                    if (limits[job.name] && job.value > limits[job.name]) {
-                        game.village.sim.removeJob(job.name, job.value - limits[job.name]);
-                        spaces[job.name] = 0;
-                    } else if (limits[job.name]) {
-                        spaces[job.name] = limits[job.name] - job.value;
-                    }
-                }
-
-                // free up Priests to take useful employment
-                var avails = game.village.getFreeKittens();
-                var reqs = 0; for (var name in spaces) { reqs += spaces[name]; }
-                if (reqs > avails && priestJob.value > 1) {
-                    // never remove last priest
-                    game.village.sim.removeJob(priestJob.name, Math.min(reqs - avails, priestJob.value - 1));
-                    avails = game.village.getFreeKittens();
-                }
-
-                // add kittens:
-                for (var job of game.village.jobs) {
-                    var space = spaces[job.name];
-                    if (job.name != 'engineer' && job.value == 0) {
-                        game.village.assignJob(job, 1); // algorithm needs at least one
-                    } else if (space) {
-                        game.village.assignJob(job, Math.round(space * Math.min(avails/reqs, 1)));
-                    }
-                }
-
-                // remainder go Priest
-                game.village.assignJob(priestJob, game.village.getFreeKittens());
-                // we do everything in one pass, no need for repeat
-                assigned = false;
-
+        if (this.model.auto.assign && game.villageTab.visible) {
+            if (this.model.option.assign === 'smart') {
+                assigned = this.smartAssign();
             } else if (game.village.getJob(this.model.option.assign).unlocked && game.village.hasFreeKittens()) {
                 game.village.assignJob(game.village.getJob(this.model.option.assign), 1);
                 assigned = true;
