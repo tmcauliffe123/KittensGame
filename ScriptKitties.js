@@ -679,9 +679,7 @@ SK.Tasks = class {
         }
         if (this.model.minor.observe) {
             var checkObserveBtn = document.getElementById('observeBtn');
-            if (typeof(checkObserveBtn) != 'undefined' && checkObserveBtn != null) {
-                document.getElementById('observeBtn').click();
-            }
+            if (checkObserveBtn) checkObserveBtn.click();
         }
         if (this.model.minor.promote) {
             var leader = game.village.leader;
@@ -1104,6 +1102,7 @@ SK.Tasks = class {
     // Auto buy religion upgrades
     autoReligion(ticksPerCycle) {
         var bought = false;
+        var futureBuy = false;
         if (this.model.auto.religion && game.religionTab.visible) {
             this.ensureContentExists('Religion');
 
@@ -1115,11 +1114,11 @@ SK.Tasks = class {
                         if (result) { bought = true; button.update(); }
                     });
                 }
+                // only things with a priceRatio cap, check if they have
+                futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
             }
-            // TODO: when we don't have enough gold, this can prematurely engage
-            var faith = game.resPool.get('faith');
-            if (this.model.minor.praiseAfter && bought == false && faith.value >= faith.maxValue) {
-                if (! this.model.auto.praise) sk.gui.autoSwitch('praise', 'SK_autoPraise');
+            if (futureBuy && this.model.minor.praiseAfter && ! this.model.auto.praise) {
+                sk.gui.autoSwitch('praise', 'SK_autoPraise');
             }
         }
         return bought;
@@ -1137,6 +1136,7 @@ SK.Tasks = class {
             var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
 
             // TODO: capping gold can take too long, use SRS to compensate
+            // fuck that noise. Write a proper autoTrade, with per civ toggles in the Options menu
             if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
                 var tiRes = game.resPool.get('titanium');
                 var unoRes = game.resPool.get('unobtainium');
@@ -1232,7 +1232,7 @@ SK.Tasks = class {
         var built = false;
         if (this.model.auto.embassy && game.science.get("writing").researched && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
             var culture = game.resPool.get('culture');
-            if (culture.value >= culture.maxValue * 0.99) { // can exceed due to MS usage
+            if (culture.value >= culture.maxValue * 0.99) { // will often exceed due to MS fluctuations
                 var panels = game.diplomacyTab.racePanels;
                 var btn = panels[0].embassyButton;
                 for (var z = 1; z < panels.length; z++) {
@@ -1428,6 +1428,9 @@ SK.Tasks = class {
     }
 }
 
+/**
+ * These are the autoPlay scripts. Highly Experimental
+ **/
 SK.Scripts = class {
     constructor(model) {
         this.model = model;
