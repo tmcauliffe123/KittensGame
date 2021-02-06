@@ -1089,22 +1089,22 @@ SK.Tasks = class {
     // Auto buy religion upgrades
     autoReligion(ticksPerCycle) {
         var bought = false;
-        var futureBuy = false;
+        var futureBuy = true;
         if (this.model.auto.religion && game.religionTab.visible) {
             this.ensureContentExists('Religion');
 
             for (var button of game.religionTab.rUpgradeButtons) {
                 if (button.model.metadata.researched) continue;
-                if ( ! button.model.enabled) button.update();
+                if (! button.model.enabled) button.update();
                 if (button.model.enabled) {
                     button.controller.buyItem(button.model, {}, function(result) {
                         if (result) { bought = true; button.update(); }
                     });
                 }
                 // only things with a priceRatio cap, check if they have
-                futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
+                futureBuy &&= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
             }
-            if (futureBuy && this.model.minor.praiseAfter && ! this.model.auto.praise) {
+            if (! futureBuy && this.model.minor.praiseAfter && ! this.model.auto.praise) {
                 sk.gui.autoSwitch('praise', 'SK_autoPraise');
             }
         }
