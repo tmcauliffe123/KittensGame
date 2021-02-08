@@ -5,6 +5,7 @@ SK = class {
         this.scripts = new SK.Scripts(this.model);
         this.tasks = new SK.Tasks(this.model, this.scripts);
         this.gui = new SK.Gui(this.model, this.tasks);
+        this.loadOptions();
     }
 
     clearScript() {
@@ -12,7 +13,51 @@ SK = class {
         this.model.wipe();
         this.gui.destroy();
         sk = null;
+        delete(LCstorage["net.sagefault.ScriptKittens.savedata"]);
         game.msg('Script is dead');
+    }
+
+    // Note: this function is deliberately not exposed in the gui.
+    // Reloading is for people already playing around in console.
+    reloadScript() {
+        // unload and save
+        this.tasks.halt();
+        this.saveOptions();
+        this.model.wipe();
+        this.gui.destroy();
+        sk = null;
+        // reload
+        var src = null;
+        for (var origin of $("#SK_origin")) {
+            if (origin.src) src = origin.src;
+            origin.remove();
+        }
+        if (src) $('<script>').attr('src', src).appendTo('body');
+    }
+
+    saveOptions() {
+        var options = {}
+        this.model.save(options);
+        this.scripts.save(options);
+        LCstorage["net.sagefault.ScriptKittens.savedata"] = JSON.stringify(options);
+    }
+
+    loadOptions() {
+        var dataString = LCstorage["net.sagefault.ScriptKittens.savedata"];
+        if (dataString) {
+            try {
+                var options = JSON.parse(dataString);
+            } catch (ex) {
+                console.error("Unable to load game data: ", ex);
+                console.log(dataString);
+                game.msg("Unable to load script settings. Settings were logged to console.", "important")
+                delete(LCstorage["net.sagefault.ScriptKittens.loaddata"]);
+                game.msg("Settings deleted.");
+            }
+            this.model.load(options);
+            this.scripts.load(options);
+            this.gui.refresh();
+        }
     }
 }
 
@@ -26,20 +71,10 @@ SK.Model = class {
 
         // These are the assorted variables
         this.books = ['parchment', 'manuscript', 'compedium', 'blueprint'];
-        this.option = {
-            book:'default',
-            assign:'smart',
-            cycle:'redmoon',
-            minSecResRatio:1,
-            maxSecResRatio:25,
-            script:'none',
-        };
+        this.option = {};
 
         // These control the selections under [Minor Options]
-        this.minor = {
-            observe:true,
-            conserveExotic:true,
-        };
+        this.minor = {};
         this.minorNames = {
             program:'Space Programs',
             observe:'Auto Observe',
@@ -67,13 +102,47 @@ SK.Model = class {
             'void',
         ];
 
+        this.setDefaults();
         this.populateDataStructures();
+    }
+
+    setDefaults() {
+        this.option = {
+            book:'default',
+            assign:'smart',
+            cycle:'redmoon',
+            minSecResRatio:1,
+            maxSecResRatio:25,
+            script:'none',
+        };
+        this.minor = {
+            observe:true,
+            conserveExotic:true,
+        };
     }
 
     wipe() {
         this.auto = {}; // wipe fields
         this.minor = {};
         this.option = {};
+        for (var buildset of [this.cathBuildings, this.spaceBuildings, this.timeBuildings]) {
+            for (var bid in buildset) {
+                delete buildset[bid].limit;
+                buildset[bid].enabled = false;
+            }
+        }
+    }
+
+    save(options) {
+        for (var key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+            options[key] = this[key];
+        }
+    }
+
+    load(options) {
+        for (var key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+            if (options[key]) this[key] = options[key];
+        }
     }
 
     populateDataStructures() {
@@ -399,6 +468,9 @@ SK.Tasks = class {
             {fn:'autoExplore',  interval:300, offset:70,  override:false},
             {fn:'autoUnicorn',  interval:300, offset:130, override:false},
             {fn:'autoBCoin',    interval:300, offset:230, override:false},
+
+            // every 90 seconds, because KG does 80, but that timing bothers me
+            {fn:'autoSave',     interval:450, offset:90, override:false},
         ]
 
         // This function keeps track of the game's ticks and uses math to execute these functions at set times relative to the game.
@@ -448,7 +520,7 @@ SK.Tasks = class {
         for (var effect of ['energyProduction', 'energyConsumption']) {
             var sign = effect == 'energyProduction' ? '+' : '-';
             total[effect] = 0;
-            for (source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
+            for (var source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
                 for (shim of source) {
                     shim = shim.buildings ? shim.buildings : [shim]
                     for (building of shim) {
@@ -1413,6 +1485,10 @@ SK.Tasks = class {
             this.scripts.run(this.model.option.script);
         }
     }
+
+    autoSave(ticksPerCycle) {
+        sk.saveOptions();
+    }
 }
 
 /**
@@ -1427,6 +1503,15 @@ SK.Scripts = class {
     init() {
         this.state = ['init'];
     }
+
+    save(options) {
+        options.scripts_state = this.state;
+    }
+
+    load(options) {
+        if (options.scripts_state) this.state = options.scripts_state;
+    }
+
 
     static listScripts() {
         return [ // format is chosen to match things like game.calendar.cycles
@@ -2151,5 +2236,3 @@ if (game && game.bld) {
     dojo.subscribe('game/start', function(){ sk = new SK()});
 }
 
-// XXX this is how to
-LCstorage['net.sagefault.scriptkittens.state'];
