@@ -1094,66 +1094,49 @@ SK.Tasks = class {
 
     // Auto Research
     autoResearch(ticksPerCycle) {
-        var acted = false;
         if (this.model.auto.research && game.libraryTab.visible) {
             this.ensureContentExists('Science');
-            var science = game.resPool.get('science').value;
-            var bestButton = null;
-            var bestCost = Infinity;
-            techloop: for (var button of game.libraryTab.buttons) {
-                var cost = 0;
-                for (var price of button.model.prices) {
-                    if (price.name == 'science') cost = price.val;
-                    if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
-                        continue techloop;
-                    }
-                }
-                if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
-                    if ( ! button.model.enabled) button.update();
-                    if (button.model.enabled) {
-                        bestButton = button;
-                        bestCost = cost;
-                    }
-                }
-            }
-            if (bestButton) {
-                bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                    if (result) {acted = true; bestButton.update();}
-                });
-            }
+            return autoTechHelper(game.libraryTab.buttons);
         }
-        return acted;
+        return false;
     }
 
     // Auto buy workshop upgrades
     autoWorkshop(ticksPerCycle) {
-        var acted = false;
         if (this.model.auto.workshop && game.workshopTab.visible) {
             this.ensureContentExists('Workshop');
-            var science = game.resPool.get('science').value;
-            var bestButton = null;
-            var bestCost = Infinity;
-            workloop: for (var button of game.workshopTab.buttons) {
-                var cost = 0;
-                for (var price of button.model.prices) {
-                    if (price.name == 'science') cost = price.val;
-                    if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
-                        continue workloop;
-                    }
-                }
-                if (cost < science && cost < bestCost && button.model.metadata.unlocked && button.model.metadata.researched != true) {
-                    if ( ! button.model.enabled) button.update();
-                    if (button.model.enabled) {
-                        bestButton = button;
-                        bestCost = cost;
-                    }
+            return autoTechHelper(game.workshopTab.buttons);
+        }
+        return false;
+    }
+
+    autoTechHelper(buttons) {
+        var acted = false;
+        var science = game.resPool.get('science').value;
+        var bestButton = null;
+        var bestCost = Infinity;
+        techloop: for (var button of buttons) {
+            if (button.model.metadata.researched || ! button.model.metadata.unlocked) continue;
+            var cost = 0;
+            for (var price of button.model.prices) {
+                if (price.name == 'science') {
+                    cost = price.val;
+                } else if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
+                    continue techloop;
                 }
             }
-            if (bestButton) {
-                bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                    if (result) {acted = true; bestButton.update();}
-                });
+            if (cost < science && cost < bestCost) {
+                if ( ! button.model.enabled) button.update();
+                if (button.model.enabled) {
+                    bestButton = button;
+                    bestCost = cost;
+                }
             }
+        }
+        if (bestButton) {
+            bestButton.controller.buyItem(bestButton.model, {}, function(result) {
+                if (result) {acted = true; bestButton.update();}
+            });
         }
         return acted;
     }
@@ -1161,12 +1144,11 @@ SK.Tasks = class {
     // Auto buy religion upgrades
     autoReligion(ticksPerCycle) {
         var bought = false;
-        var futureBuy = true;
+        var futureBuy = false;
         if (this.model.auto.religion && game.religionTab.visible) {
             this.ensureContentExists('Religion');
 
             for (var button of game.religionTab.rUpgradeButtons) {
-                if (button.model.metadata.researched) continue;
                 if (! button.model.enabled) button.update();
                 if (button.model.enabled) {
                     button.controller.buyItem(button.model, {}, function(result) {
@@ -1174,7 +1156,7 @@ SK.Tasks = class {
                     });
                 }
                 // only things with a priceRatio cap, check if they have
-                futureBuy &&= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
+                futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
             }
             if (! futureBuy && this.model.minor.praiseAfter && ! this.model.auto.praise) {
                 sk.gui.autoSwitch('praise', 'SK_autoPraise');
