@@ -28,11 +28,19 @@ SK = class {
         sk = null;
         // reload
         var src = null;
-        for (var origin of $("#SK_origin")) {
-            if (origin.src) src = origin.src;
-            origin.remove();
+        var origins = $("#SK_origin");
+        for (var i=0; i<origins.length; i+=1) {
+            if (origins[i].src) src = origins[i].src;
+            origins[i].remove();
         }
-        if (src) $('<script>').attr('src', src).appendTo('body');
+        if (src) {
+            var script = document.createElement('script');
+            script.src = src;
+            script.id = 'SK_origin';
+            document.body.appendChild(script);
+        } else {
+            console.error("No <script> found with id=='SK_origin'");
+        }
     }
 
     saveOptions() {
@@ -521,9 +529,9 @@ SK.Tasks = class {
             var sign = effect == 'energyProduction' ? '+' : '-';
             total[effect] = 0;
             for (var source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
-                for (shim of source) {
+                for (var shim of source) {
                     shim = shim.buildings ? shim.buildings : [shim]
-                    for (building of shim) {
+                    for (var building of shim) {
                         var stage = building.stage ? building.stages[building.stage] : building;
                         if (! stage.effects || building.val == 0) continue;
                         var eper = stage.effects[effect];
@@ -567,8 +575,6 @@ SK.Tasks = class {
                 // ctPanel is set during constructor, if it's not there we're pooched
                 break;
             case 'Space':
-                // XXX FAILED. Did NOT proc.
-                // TODO TEST THIS, especially GCPanel
                 doRender = (! tab.planetPanels || ! tab.GCPanel);
                 if (tab.planetPanels) {
                     var planetCount = 0
@@ -1096,7 +1102,7 @@ SK.Tasks = class {
     autoResearch(ticksPerCycle) {
         if (this.model.auto.research && game.libraryTab.visible) {
             this.ensureContentExists('Science');
-            return autoTechHelper(game.libraryTab.buttons);
+            return this.autoTechHelper(game.libraryTab.buttons);
         }
         return false;
     }
@@ -1105,7 +1111,7 @@ SK.Tasks = class {
     autoWorkshop(ticksPerCycle) {
         if (this.model.auto.workshop && game.workshopTab.visible) {
             this.ensureContentExists('Workshop');
-            return autoTechHelper(game.workshopTab.buttons);
+            return this.autoTechHelper(game.workshopTab.buttons);
         }
         return false;
     }
@@ -1514,7 +1520,7 @@ SK.Scripts = class {
 
         // action
         var action = this.state.shift();
-        console.log(`Doing ${action}, remaining ${this.state}`);
+        console.log(`Doing ${action}  --  [${this.state}]`);
         var done = this[script](action);
         if (done) {
             sk.gui.refresh();
