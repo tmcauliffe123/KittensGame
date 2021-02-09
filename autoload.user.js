@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Autoload ScriptKitties
 // @namespace    http://sagefault.net/
-// @version      1.0
+// @version      1.1
 // @description  See name
 // @match        http*://bloodrizer.ru/games/kittens/
 // @match        http*://kittensgame.com/web/
