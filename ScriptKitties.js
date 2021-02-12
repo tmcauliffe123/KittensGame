@@ -612,6 +612,14 @@ SK.Tasks = class {
                 game.ui.render();
             }
         }
+
+        // For things we need to do post-render()
+        switch(tabId) {
+            case 'Time':
+                // cfPanel only becomes "visible" on an update()
+                if (!game.timeTab.cfPanel.visible && game.workshop.get("chronoforge").researched) game.timeTab.update();
+                break;
+        }
     }
 
     /*** Individual Auto Scripts start here ***/
@@ -705,7 +713,7 @@ SK.Tasks = class {
                     } else if (this.model.books.includes(output) && this.model.option.book != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
                         var outputIndex = this.model.books.indexOf(output);
-                        var choiceIndex = this.model.books.indexOf(this.model.option.bookChoice);
+                        var choiceIndex = this.model.books.indexOf(this.model.option.book);
                         if (outputIndex > choiceIndex) craftCount = 0;
                     } else {
                         // secondary resource: general
@@ -1239,6 +1247,7 @@ SK.Tasks = class {
     autoShatter(ticksPerCycle, shattering) {
         var timeslip = false;
         if (this.model.auto.shatter || this.model.auto.cycle) {
+            this.ensureContentExists('Time');
             if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
                 var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
                 var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect('heatPerTick'));
