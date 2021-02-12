@@ -1192,11 +1192,17 @@ SK.Tasks = class {
 
             // TODO: capping gold can take too long, use SRS to compensate
             // fuck that noise. Write a proper autoTrade, with per civ toggles in the Options menu
+            var maxTrades = 0;
             if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
+                maxTrades = goldResource.value / 15;
+            } else {
+                maxTrades = goldPerCycle * this.model.option.minSecResRatio / 100 / 15; // consume up to mSRR% of production
+            }
+            if (maxTrades > 0) {
                 var tiRes = game.resPool.get('titanium');
                 var unoRes = game.resPool.get('unobtainium');
 
-                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked) {
+                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && ! this.model.minor.noElderTrade) {
                     game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
                     traded = true;
                 } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
@@ -1213,9 +1219,9 @@ SK.Tasks = class {
                     // don't overdo it
                     var deltaTi = tiRes.maxValue - tiRes.value;
                     var expectedTi = game.resPool.get('ship').value * 0.03;
-                    sellCount = Math.ceil(Math.min(sellCount, deltaTi / expectedTi));
+                    sellCount = Math.ceil(Math.min(maxTrades, sellCount, deltaTi / expectedTi));
                     game.diplomacy.tradeMultiple(game.diplomacy.get('zebras'), sellCount);
-                    traded = true;
+                    traded = false; // don't back-to-back zebra trade
                 }
             }
         }
