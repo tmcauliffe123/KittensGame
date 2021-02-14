@@ -1,5 +1,5 @@
 
-SK = class {
+var SK = class {
     constructor() {
         this.model = new SK.Model();
         this.scripts = new SK.Scripts(this.model);
@@ -92,6 +92,7 @@ SK.Model = class {
             praiseAfter:'Praise After Religion',
             unicornIvory:'Unicorn Ivory Optimization',
             conserveExotic:'Conserve Exotic Resources',
+            permitReset:'Permit AutoPlay to Reset',
         };
 
         // These will allow quick selection of the buildings which consume energy
@@ -1690,22 +1691,31 @@ SK.Scripts = class {
     }
 
     reset() {
-        sk.tasks.halt();
-        var script = this.model.option.script;
-        this.model.wipe(); // start over.
+        let reset = this.model.minor.permitReset;
+        let script = this.model.option.script;
+
+        // reset settings to initial state, except for script metasettings
+        // note that autoPlay will be off, this is the last time we'll get in.
+        this.model.wipe();
         this.model.setDefaults();
-        this.model.auto.play = true;
         this.model.option.script = script;
-        this.init();
-        sk.saveOptions();
-        game.reset();
+        this.model.minor.permitReset = reset;
+
+        if (reset) {
+            sk.tasks.halt();
+            this.sellout();
+            this.model.auto.play = true;
+            this.init();
+            sk.saveOptions();
+            game.reset();
+        } else {
+            game.msg('AutoPlay Reset not permitted. Script Terminating.');
+        }
     }
 
     /*** This is where scripts start ***/
 
     slowloop(action) {
-        // TODO:
-        // - this.model.minor.unicornIvory = true;
         switch(action) {
             case 'init': // -> workshop-start, science-end, build-upgrade, trade-zebras, trade-hunt, policy
                 this.model.auto.explore = true;
@@ -2199,8 +2209,9 @@ SK.Scripts = class {
                 // these two are good enough, rest tends to follow suit
                 var culture = game.resPool.get('culture');
                 var faith = game.resPool.get('faith');
-                if (culture.value >= culture.maxValue && faith.value >= faith.maxValue) {
-                    this.sellout();
+                if (! this.model.minor.permitReset) {
+                    return true; // stop here.
+                } else if (culture.value >= culture.maxValue && faith.value >= faith.maxValue) {
                     this.reset();
                     return true;
                 }
@@ -2225,6 +2236,7 @@ SK.Scripts = class {
     doReset(action) {
         switch(action) {
             case 'init': // |-> cooldown
+                // disable all automation except craft, and use up chronoheat
                 for (var auto in this.model.auto) this.model.auto[auto] = false;
                 this.model.auto.craft = true;
                 this.model.auto.play = true;
@@ -2237,8 +2249,6 @@ SK.Scripts = class {
                     game.time.getCFU('blastFurnace').isAutomationEnabled = true; // spend chronoheat
                     return false;
                 }
-                this.model.auto.craft = false;
-                this.sellout();
                 this.reset();
                 return true;
 
