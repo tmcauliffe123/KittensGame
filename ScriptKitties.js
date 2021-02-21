@@ -1643,6 +1643,27 @@ SK.Scripts = class {
         return count == buildings.length;
     }
 
+    craftFor(manager, buildings) {
+        for (let bName of buildings) {
+            let building = manager.get(bName);
+            if (building.researched) continue;
+            for (let price of building.prices) {
+                let res = game.resPool.get(price.name);
+                if (res.value >= price.val) continue; // we have enough
+
+                let craft = game.workshop.getCraft(price.name);
+                if (! craft) continue; // not craftable
+
+                let need = Math.ceil((price.val - res.value) / (1 + game.getEffect('craftRatio')));
+                for (let craftPrice of craft.prices) {
+                    let craftRes = game.resPool.get(craftPrice.name);
+                    need = Math.min(need, Math.floor(craftRes.value / craftPrice.val));
+                }
+                if (need > 0) game.craft(price.name, need);
+            }
+        }
+    }
+
     isCapped(buttons, target) {
         for (var button of buttons) {
             if (button.model.metadata?.name != 'chronosphere') continue;
@@ -1707,10 +1728,12 @@ SK.Scripts = class {
         // note that autoPlay will be off, this is the last time we'll get in.
         this.model.wipe();
         this.model.setDefaults();
-        this.model.option.script = script;
-        this.model.minor.permitReset = reset;
+        if (script !== 'doReset') {
+            this.model.option.script = script;
+            this.model.minor.permitReset = reset;
+        }
 
-        if (reset) {
+        if (reset || script === 'doReset') {
             sk.tasks.halt();
             this.sellout();
             this.model.auto.play = true;
@@ -1986,8 +2009,11 @@ SK.Scripts = class {
     fastloop(action) {
         switch(action) {
             case 'build-start':
+                this.slowloop(action);
                 this.model.spaceBuildings.spaceElevator.enabled = true;
-                return this.slowloop(action);
+                this.model.timeBuildings.marker.enabled = false;
+                this.model.timeBuildings.blackPyramid.enabled = false;
+                return true;
 
             case 'build-end':
                 // elevator is already on, OA isn't helpful enough, and we shouldn't hit DF
@@ -2019,46 +2045,18 @@ SK.Scripts = class {
     }
 
     fastParagon(action) {
-        // TODO: main problems are:
-        // 3. should build some elevators, figure out quantity
-        // 4. need eludium for thing like microwarp
-        // 5. need to converse alloy for critical tasks, maybe adjust SRS
-        //      -> the problem is we don't cap Ti, (why not?)
-        //
-        // Total UO spend: (workshop)
-        //     350 huts
-        //     5000 Flux Condensator
-        //     125E huts -- ~6000 UO
-        //     50E microwarp -- ~3000 UO
-        // Total UO spend: buildings
-        //     2500 ++ chronosphere (17314 for 5 of them)
-        //     50 ++ elevators (improve UO)
-        // If we go hard into UO/E tech, we need: 31,664 UO
-        //     Each elevator is worth 5% base production, or about 0.05 UO/second
-        //     assuming we have a base of about 1.5 UO/s, and about +400% bonus
-        //     we stop building elevators at:
-        //          total build time: 3518 seconds
-        //          -> not worth it.
-        // Reset:
-        //      2500 UO for chrono,
-        //
-        // Maybe focus upgrades:
-        //     Space Manufacturing, Factory Logistics, Microwarp
-        //
-        // Once we've got some core techs, disable AutoUpgrade
-        // switch to singlebuys
-        //
-        //
-
+        // Goal: 5 chronospheres, Flux Condenator, Eludium Huts
+        // Estimate of ~1000 paragon per hour.
         switch(action) {
             case 'init': // -> build-start, build-upgrade, workshop-mid, trade-zebras, trade-hunt, policy
                 this.model.auto.explore = true;
+                this.model.auto.hunt = true;
                 this.model.auto.party = true;
                 this.model.auto.research = true;
                 this.model.auto.unicorn = true;
                 this.model.auto.workshop = true;
                 this.model.option.minSecResRatio = 10; // more alloy
-                this.model.minor.program = true;
+                this.model.minor.program = 1000; // starchart<=1000: orbit,moon,dune,piscine
                 this.model.minor.feed = true;
                 this.model.minor.promote = true;
                 this.model.minor.praiseAfter = true;
@@ -2066,7 +2064,6 @@ SK.Scripts = class {
                 this.state.push('build-upgrade');
                 this.state.push('workshop-mid');
                 this.state.push('trade-zebras');
-                this.state.push('trade-hunt');
                 this.state.push('policy');
                 return true;
 
@@ -2092,13 +2089,14 @@ SK.Scripts = class {
                     if (limit) this.model.cathBuildings[bname].limit = limit;
                 }
                 /** space **/
-                var space = {
+                var slimit = {
                     spaceElevator:5, sattelite:false, moonOutpost:false,
-                    planetCracker:false, hydrofracturer:false, spiceRefinery:false, // TODO limit these, they cost alloy
+                    hydrofracturer:10, spiceRefinery:10,
+                    researchVessel:40,
                 };
-                for (var bname in space) {
+                for (var bname in slimit) {
                     this.model.spaceBuildings[bname].enabled = true;
-                    this.model.spaceBuildings[bname].limit = tlimit[bname];
+                    this.model.spaceBuildings[bname].limit = slimit[bname];
                 }
                 /** turn it on **/
                 this.model.auto.build = true;
@@ -2117,18 +2115,26 @@ SK.Scripts = class {
                 }
                 return false;
 
-            case 'workshop-mid': // -> workshop-end
-                // TODO - when this stops, see what's left, make better choices
-                var requiredWorkshop = ['railgun', 'concreteHuts', 'caravanserai', 'orbitalGeodesy', 'seti', 'cadSystems'];
+            case 'workshop-start': // -> workshop-mid
+                var requiredWorkshop = ['railgun', 'concreteHuts', 'caravanserai', 'orbitalGeodesy', 'seti', 'cadSystems', 'hubbleTelescope'];
                 for (var upgrade of requiredWorkshop) {
                     if (! game.workshop.get(upgrade).researched) return false;
                 }
                 this.model.auto.workshop = false;
-                this.state.push('workshop-end');
+                this.state.push('workshop-mid');
                 return true;
 
+            case 'workshop-mid': // -> workshop-end
+                var extraWorkshop = ['spaceManufacturing', 'factoryLogistics', 'unobtainiumHuts'];
+                if (this.singleTech(game.workshopTab.buttons, extraWorkshop)) {
+                    this.state.push('workshop-end');
+                    return true;
+                }
+                return false;
+
             case 'workshop-end': // -|
-                var extraWorkshop = ['spaceManufacturing', 'factoryLogistics', 'mWReactor', 'unobtainiumHuts', 'eludiumHuts'];
+                var extraWorkshop = ['mWReactor', 'eludiumHuts', 'fluxCondensator'];
+                this.craftFor(game.workshop, extraWorkshop);
                 if (this.singleTech(game.workshopTab.buttons, extraWorkshop)) {
                     return true;
                 }
@@ -2174,15 +2180,6 @@ SK.Scripts = class {
                 this.model.auto.trade = true;
                 return true;
 
-            case 'trade-hunt': // -|
-                if (game.getEffect('hunterRatio') > 4
-                        && game.calendar.festivalDays >= 400*5
-                        && game.diplomacy.get('zebras').unlocked) {
-                    this.model.auto.hunt = true;
-                    return true;
-                }
-                return false;
-
             case 'pop-max-cath': // -> pop-max-space
                 var kittens = game.resPool.get('kittens');
                 if (kittens.value == kittens.maxValue) {
@@ -2200,8 +2197,8 @@ SK.Scripts = class {
                 // We want give spaceStations time to show up so we'll cap them too
                 // but sometimes we get 5 CS and flux before we hit cathCap
                 // which means this will insta-complete
-                if (kittens.value == kittens.maxValue
-                    && singleBuild(game.bldTab.buttons, 'spaceStation') // at least one
+                if (this.singleBuild(game.spaceTab.planetPanels[0].children, 'spaceStation') // at least one
+                    && kittens.value >= kittens.maxValue
                     && game.bld.get('chronosphere').val >= 5
                     && game.workshop.get('fluxCondensator').researched) {
                     // disable auto tech,
@@ -2218,9 +2215,7 @@ SK.Scripts = class {
                 // these two are good enough, rest tends to follow suit
                 var culture = game.resPool.get('culture');
                 var faith = game.resPool.get('faith');
-                if (! this.model.minor.permitReset) {
-                    return true; // stop here.
-                } else if (culture.value >= culture.maxValue && faith.value >= faith.maxValue) {
+                if (culture.value >= culture.maxValue && faith.value >= faith.maxValue) {
                     this.reset();
                     return true;
                 }
