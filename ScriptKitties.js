@@ -703,7 +703,12 @@ SK.Tasks = class {
                     var inVal = inRes.value / input.val;
                     craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
 
-                    if (inRes.maxValue != 0) {
+                    if (this.model.books.includes(output) && this.model.option.book != 'default') {
+                        // secondary resource: fur, parchment, manuscript, compendium
+                        var outputIndex = this.model.books.indexOf(output);
+                        var choiceIndex = this.model.books.indexOf(this.model.option.book);
+                        if (outputIndex > choiceIndex) craftCount = 0;
+                    } else if (inRes.maxValue != 0) {
                         // primary resource
                         var resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
                         if (inRes.value >= (inRes.maxValue - resourcePerCycle) || resourcePerCycle >= inRes.maxValue) {
@@ -711,11 +716,6 @@ SK.Tasks = class {
                         } else {
                             craftCount = 0;
                         }
-                    } else if (this.model.books.includes(output) && this.model.option.book != 'default') {
-                        // secondary resource: fur, parchment, manuscript, compendium
-                        var outputIndex = this.model.books.indexOf(output);
-                        var choiceIndex = this.model.books.indexOf(this.model.option.book);
-                        if (outputIndex > choiceIndex) craftCount = 0;
                     } else {
                         // secondary resource: general
                         var inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
@@ -813,6 +813,12 @@ SK.Tasks = class {
             this.ensureContentExists('Space');
             for (var program of game.spaceTab.GCPanel.children) {
                 if (program.model.metadata.unlocked && program.model.on == 0) {
+                    // hack to allow a limit on how far out to go
+                    if (typeof(this.model.minor.program) == 'number') {
+                        let chart = program.model.metadata.prices.find(p => p.name === 'starchart');
+                        if (this.model.minor.program < chart.val) continue;
+                    }
+                    // normal path
                     if (! program.model.enabled) program.controller.updateEnabled(program.model);
                     if (program.model.enabled) {
                         program.controller.buyItem(program.model, {}, function(result) {
@@ -1059,7 +1065,7 @@ SK.Tasks = class {
                     continue untilNeed;
                 }
             }
-            console.log("UH OH!");
+            console.log("UH OH!"); // TODO: this happens.
             break; // this should not be possible, but infinite loops are really bad
         }
         // lose them
@@ -1135,24 +1141,24 @@ SK.Tasks = class {
     }
 
     // Auto Research
-    autoResearch(ticksPerCycle) {
+    autoResearch(ticksPerCycle, consecutive) {
         if (this.model.auto.research && game.libraryTab.visible) {
             this.ensureContentExists('Science');
-            return this.autoTechHelper(game.libraryTab.buttons);
+            return this.autoTechHelper(game.libraryTab.buttons, consecutive);
         }
         return false;
     }
 
     // Auto buy workshop upgrades
-    autoWorkshop(ticksPerCycle) {
+    autoWorkshop(ticksPerCycle, consecutive) {
         if (this.model.auto.workshop && game.workshopTab.visible) {
             this.ensureContentExists('Workshop');
-            return this.autoTechHelper(game.workshopTab.buttons);
+            return this.autoTechHelper(game.workshopTab.buttons, consecutive);
         }
         return false;
     }
 
-    autoTechHelper(buttons) {
+    autoTechHelper(buttons, skipUpdate) {
         var acted = false;
         var science = game.resPool.get('science').value;
         var bestButton = null;
@@ -1168,7 +1174,7 @@ SK.Tasks = class {
                 }
             }
             if (cost < science && cost < bestCost) {
-                if ( ! button.model.enabled) button.update();
+                if (! skipUpdate && ! button.model.enabled) button.controller.updateEnabled(button.model);
                 if (button.model.enabled) {
                     bestButton = button;
                     bestCost = cost;
@@ -1606,7 +1612,10 @@ SK.Scripts = class {
             if (targets.includes(metadata.name)) {
                 if (metadata.researched || metadata.on) {
                     count += 1;
-                } else if (button.model.enabled) { // TODO testing
+                    continue;
+                }
+                if (! button.model.enabled) button.controller.updateEnabled(button.model);
+                if (button.model.enabled) { // TODO testing
                     button.controller.buyItem(button.model, {}, function(result) {
                         if (result) button.update();
                     });
