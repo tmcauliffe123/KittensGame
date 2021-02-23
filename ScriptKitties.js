@@ -2194,12 +2194,12 @@ SK.Scripts = class {
 
             case 'pop-max-space': // -> endgame-stockpile
                 var kittens = game.resPool.get('kittens');
-                // We want give spaceStations time to show up so we'll cap them too
-                // but sometimes we get 5 CS and flux before we hit cathCap
-                // which means this will insta-complete
-                if (this.singleBuild(game.spaceTab.planetPanels[0].children, 'spaceStation') // at least one
-                    && kittens.value >= kittens.maxValue
+                // We want more than five space stations, but once we have a few,
+                // we will build them faster than we fill them. Just need to
+                // prime the pump
+                if (kittens.value >= kittens.maxValue
                     && game.bld.get('chronosphere').val >= 5
+                    && game.space.getBuilding('spaceStation').val >= 5
                     && game.workshop.get('fluxCondensator').researched) {
                     // disable auto tech,
                     for (var auto in this.model.auto) {
@@ -2212,10 +2212,10 @@ SK.Scripts = class {
                 return false;
 
             case 'endgame-stockpile': // -> endgame-reset!
-                // these two are good enough, rest tends to follow suit
+                // wait for culture to cap, this usually doesn't take long, but
+                // gives us enough time to hoard resources for the reset
                 var culture = game.resPool.get('culture');
-                var faith = game.resPool.get('faith');
-                if (culture.value >= culture.maxValue && faith.value >= faith.maxValue) {
+                if (culture.value >= culture.maxValue) {
                     this.reset();
                     return true;
                 }
