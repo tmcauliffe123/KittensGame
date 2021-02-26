@@ -13,7 +13,7 @@ var SK = class {
         this.model.wipe();
         this.gui.destroy();
         sk = null;
-        delete(LCstorage["net.sagefault.ScriptKittens.savedata"]);
+        delete(LCstorage['net.sagefault.ScriptKittens.savedata']);
         game.msg('Script is dead');
     }
 
@@ -27,47 +27,47 @@ var SK = class {
         this.gui.destroy();
         sk = null;
         // reload
-        var src = null;
-        var origins = $("#SK_origin");
-        for (var i=0; i<origins.length; i+=1) {
+        let src = null;
+        const origins = $('#SK_origin');
+        for (let i=0; i<origins.length; i+=1) {
             if (origins[i].src) src = origins[i].src;
             origins[i].remove();
         }
         if (src) {
-            var script = document.createElement('script');
+            const script = document.createElement('script');
             script.src = src;
             script.id = 'SK_origin';
             document.body.appendChild(script);
         } else {
-            console.error("No <script> found with id=='SK_origin'");
+            console.error('No <script> found with id=="SK_origin"');
         }
     }
 
     saveOptions() {
-        var options = {}
+        const options = {};
         this.model.save(options);
         this.scripts.save(options);
-        LCstorage["net.sagefault.ScriptKittens.savedata"] = JSON.stringify(options);
+        LCstorage['net.sagefault.ScriptKittens.savedata'] = JSON.stringify(options);
     }
 
     loadOptions() {
-        var dataString = LCstorage["net.sagefault.ScriptKittens.savedata"];
+        const dataString = LCstorage['net.sagefault.ScriptKittens.savedata'];
         if (dataString) {
             try {
                 var options = JSON.parse(dataString);
             } catch (ex) {
-                console.error("Unable to load game data: ", ex);
+                console.error('Unable to load game data: ', ex);
                 console.log(dataString);
-                game.msg("Unable to load script settings. Settings were logged to console.", "important")
-                delete(LCstorage["net.sagefault.ScriptKittens.loaddata"]);
-                game.msg("Settings deleted.");
+                game.msg('Unable to load script settings. Settings were logged to console.', 'important');
+                delete(LCstorage['net.sagefault.ScriptKittens.loaddata']);
+                game.msg('Settings deleted.');
             }
             this.model.load(options);
             this.scripts.load(options);
             this.gui.refresh();
         }
     }
-}
+};
 
 /**
  * These are the data structures that govern the automation scripts
@@ -84,20 +84,20 @@ SK.Model = class {
         // These control the selections under [Minor Options]
         this.minor = {};
         this.minorNames = {
-            program:'Space Programs',
-            observe:'Auto Observe',
-            feed:'Auto Feed Elders',
-            promote:'Auto Promote Leader',
-            wait4void:'Only Shatter at Season Start',
-            praiseAfter:'Praise After Religion',
-            unicornIvory:'Unicorn Ivory Optimization',
-            conserveExotic:'Conserve Exotic Resources',
-            permitReset:'Permit AutoPlay to Reset',
+            program: 'Space Programs',
+            observe: 'Auto Observe',
+            feed: 'Auto Feed Elders',
+            promote: 'Auto Promote Leader',
+            wait4void: 'Only Shatter at Season Start',
+            praiseAfter: 'Praise After Religion',
+            unicornIvory: 'Unicorn Ivory Optimization',
+            conserveExotic: 'Conserve Exotic Resources',
+            permitReset: 'Permit AutoPlay to Reset',
         };
 
         // These will allow quick selection of the buildings which consume energy
         this.power = {};
-        for (var b of ['biolab', 'oilWell', 'factory', 'calciner', 'accelerator']) {
+        for (const b of ['biolab', 'oilWell', 'factory', 'calciner', 'accelerator']) {
             this.power[b] = game.bld.get(b);
         }
 
@@ -117,16 +117,16 @@ SK.Model = class {
 
     setDefaults() {
         this.option = {
-            book:'default',
-            assign:'smart',
-            cycle:'redmoon',
-            minSecResRatio:1,
-            maxSecResRatio:25,
-            script:'none',
+            book: 'default',
+            assign: 'smart',
+            cycle: 'redmoon',
+            minSecResRatio: 1,
+            maxSecResRatio: 25,
+            script: 'none',
         };
         this.minor = {
-            observe:true,
-            conserveExotic:true,
+            observe: true,
+            conserveExotic: true,
         };
     }
 
@@ -134,8 +134,8 @@ SK.Model = class {
         this.auto = {}; // wipe fields
         this.minor = {};
         this.option = {};
-        for (var buildset of [this.cathBuildings, this.spaceBuildings, this.timeBuildings]) {
-            for (var bid in buildset) {
+        for (const buildset of [this.cathBuildings, this.spaceBuildings, this.timeBuildings]) {
+            for (const bid in buildset) {
                 delete buildset[bid].limit;
                 buildset[bid].enabled = false;
             }
@@ -143,13 +143,13 @@ SK.Model = class {
     }
 
     save(options) {
-        for (var key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+        for (const key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
             options[key] = this[key];
         }
     }
 
     load(options) {
-        for (var key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+        for (const key of ['auto', 'minor', 'option', 'cathBuildings', 'spaceBuildings', 'timeBuildings']) {
             if (options[key]) this[key] = options[key];
         }
     }
@@ -159,55 +159,54 @@ SK.Model = class {
         this.cathBuildings = {/* list is auto-generated, looks like:
             field:{label:'Catnip Field', enabled:false},
             ...
-        */};
+            */};
         this.cathGroups = [/*
             ['Food Production', ['field', 'pasture', 'aqueduct']],
             ...
-        */];
-        for (var group of game.bld.buildingGroups) {
-            var buildings = group.buildings.map(function(n){return game.bld.get(n)});
+            */];
+        for (const group of game.bld.buildingGroups) {
+            const buildings = group.buildings.map((n) => game.bld.get(n));
             this.cathGroups.push([group.title, this.buildGroup(buildings, this.cathBuildings)]);
         }
 
         this.spaceBuildings = {/*
             spaceElevator:{label:'Space Elevator', enabled:false},
             ...
-        */};
+            */};
         this.spaceGroups = [/*
             ['Cath', ['spaceElevator', 'sattelite', 'spaceStation']],
             ...
-        */];
-        for (var planet of game.space.planets) {
+            */];
+        for (const planet of game.space.planets) {
             this.spaceGroups.push([planet.label, this.buildGroup(planet.buildings, this.spaceBuildings)]);
         }
 
         this.timeBuildings = {/*
             // As above, but for Ziggurats, Cryptotheology, Chronoforge, Void Space
             ...
-        */};
+            */};
         this.timeGroups = [/*
             // As above
             ...
-        */];
+            */];
         this.timeGroups.push(['Ziggurats', this.buildGroup(game.religion.zigguratUpgrades, this.timeBuildings)]);
         this.timeGroups.push(['Cryptotheology', this.buildGroup(game.religion.transcendenceUpgrades, this.timeBuildings)]);
         this.timeGroups.push(['Chronoforge', this.buildGroup(game.time.chronoforgeUpgrades, this.timeBuildings)]);
         this.timeGroups.push(['Void Space', this.buildGroup(game.time.voidspaceUpgrades, this.timeBuildings)]);
-
     }
 
     buildGroup(buildings, dict) {
-        var group = [];
-        for (var building of buildings) {
+        const group = [];
+        for (const building of buildings) {
             if (buildings==game.religion.zigguratUpgrades && building.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
-            var label = building.stages?.map(function(x){return x.label}).join(' / '); // for 'Library / Data Center', etc
+            let label = building.stages?.map((x) => x.label).join(' / '); // for 'Library / Data Center', etc
             label ||= building.label;
-            dict[building.name] = {label:label, enabled:false};
+            dict[building.name] = {label: label, enabled: false};
             group.push(building.name);
         }
         return group;
     }
-}
+};
 
 /**
  * This subclass contains the code that lays out the GUI elements
@@ -218,25 +217,25 @@ SK.Gui = class {
         this.tasks = tasks;
         this.switches = {};
         this.dropdowns = {};
-        $("#footerLinks").append('<div id="SK_footerLink" class="column">'
+        $('#footerLinks').append('<div id="SK_footerLink" class="column">'
             + ' | <a href="#" onclick="$(\'#SK_mainOptions\').toggle();"> ScriptKitties </a>'
             + '</div>');
-        $("#game").append(this.generateMenu());
-        $("#SK_mainOptions").hide(); // only way I can find to have display:grid but start hidden
-        $("#game").append(this.generateBuildingMenu());
+        $('#game').append(this.generateMenu());
+        $('#SK_mainOptions').hide(); // only way I can find to have display:grid but start hidden
+        $('#game').append(this.generateBuildingMenu());
         this.switchTab('cath'); // default
-        $("#game").append(this.generateMinorOptionsMenu());
+        $('#game').append(this.generateMinorOptionsMenu());
     }
 
     destroy() {
-        $("#SK_footerLink").remove();
-        $("#SK_mainOptions").remove();
-        $("#SK_buildingOptions").remove();
-        $("#SK_minorOptions").remove();
+        $('#SK_footerLink').remove();
+        $('#SK_mainOptions').remove();
+        $('#SK_buildingOptions').remove();
+        $('#SK_minorOptions').remove();
     }
 
     generateMenu() {
-        var grid = [ // Grid Layout
+        const grid = [ // Grid Layout
             [this.autoButton('Kill Switch', 'sk.clearScript()')],
             [this.autoButton('Check Efficiency', 'sk.tasks.kittenEfficiency()'), this.autoButton('Minor Options', '$(\'#SK_minorOptions\').toggle();')],
             [this.autoSwitchButton('Auto Build', 'build'), this.autoButton('Select Building', '$(\'#SK_buildingOptions\').toggle();')],
@@ -264,13 +263,13 @@ SK.Gui = class {
             [this.autoSwitchButton('Auto Religion', 'religion'), this.autoSwitchButton('Auto Unicorn', 'unicorn')],
             [this.autoSwitchButton('Energy Control', 'energy'), this.autoSwitchButton('Auto Flux', 'flux')],
         ];
-        this.dropdowns['minSecResRatio'] = 'SK_minSRS';
-        this.dropdowns['maxSecResRatio'] = 'SK_maxSRS';
+        this.dropdowns.minSecResRatio = 'SK_minSRS';
+        this.dropdowns.maxSecResRatio = 'SK_maxSRS';
 
-        var menu = '<div id="SK_mainOptions" class="dialog" style="display:grid; grid-template-columns:177px 177px; column-gap:5px; row-gap:5px; left:auto; top:auto !important; right:30px; bottom: 30px; padding:10px">';
+        let menu = '<div id="SK_mainOptions" class="dialog" style="display:grid; grid-template-columns:177px 177px; column-gap:5px; row-gap:5px; left:auto; top:auto !important; right:30px; bottom: 30px; padding:10px">';
         menu += '<a href="#" onclick="$(\'#SK_mainOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
-        for (var row = 0; row < grid.length; row++) {
-            for (var col = 0; col < grid[row].length; col++) {
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[row].length; col++) {
                 if (!grid[row][col].includes('{{grid}}')) console.warn(`Cell at [${row+1},${col+1}] does not have position marker`);
                 menu += grid[row][col].replace('{{grid}}', `grid-row:${row+1}; grid-column:${col+1};`);
             }
@@ -280,11 +279,11 @@ SK.Gui = class {
     }
 
     generateMinorOptionsMenu() {
-        var menu = '';
+        let menu = '';
         menu += '<div id="SK_minorOptions" class="dialog help" style="border: 1px solid gray; display:none;">';
         menu += '<a href="#" onclick="$(\'#SK_minorOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
-        for (var opt in this.model.minorNames) {
-            menu += `<input type="checkbox" id="SK_${opt}" onchange="sk.model.minor['${opt}']=this.checked"${this.model.minor[opt]?' checked':''}>`;
+        for (const opt in this.model.minorNames) {
+            menu += `<input type="checkbox" id="SK_${opt}" onchange="sk.model.minor.${opt}=this.checked"${this.model.minor[opt]?' checked':''}>`;
             menu += `<label style="padding-left:10px;" for="SK_${opt}">${this.model.minorNames[opt]}</label><br>`;
         }
         menu += '</div>';
@@ -292,7 +291,7 @@ SK.Gui = class {
     }
 
     generateBuildingMenu() {
-        var menu = '';
+        let menu = '';
         menu += '<div id="SK_buildingOptions" class="dialog help" style="border: 1px solid gray; display:none; margin-top:-333px; margin-left:-200px;">';
         menu +=   '<a href="#" onclick="$(\'#SK_buildingOptions\').hide();" style="position: absolute; top: 10px; right: 15px;">close</a>';
         menu +=   '<div class="tabsContainer" style="position: static;">';
@@ -312,43 +311,43 @@ SK.Gui = class {
     }
 
     switchTab(name) {
-        $("#SK_cathTab").removeClass("activeTab");
-        $("#SK_spaceTab").removeClass("activeTab");
-        $("#SK_timeTab").removeClass("activeTab");
-        $("#SK_cathBuildingsPane").hide();
-        $("#SK_spaceBuildingsPane").hide();
-        $("#SK_timeBuildingsPane").hide();
+        $('#SK_cathTab').removeClass('activeTab');
+        $('#SK_spaceTab').removeClass('activeTab');
+        $('#SK_timeTab').removeClass('activeTab');
+        $('#SK_cathBuildingsPane').hide();
+        $('#SK_spaceBuildingsPane').hide();
+        $('#SK_timeBuildingsPane').hide();
 
-        switch(name) {
+        switch (name) {
             case 'cath':
-                $("#SK_cathTab").addClass("activeTab");
-                $("#SK_cathBuildingsPane").show();
+                $('#SK_cathTab').addClass('activeTab');
+                $('#SK_cathBuildingsPane').show();
                 break;
             case 'space':
-                $("#SK_spaceTab").addClass("activeTab");
-                $("#SK_spaceBuildingsPane").show();
+                $('#SK_spaceTab').addClass('activeTab');
+                $('#SK_spaceBuildingsPane').show();
                 break;
             case 'time':
-                $("#SK_timeTab").addClass("activeTab");
-                $("#SK_timeBuildingsPane").show();
+                $('#SK_timeTab').addClass('activeTab');
+                $('#SK_timeBuildingsPane').show();
                 break;
         }
     }
 
     generateBuildingPane(groups, elementsName) {
-        var menu = '';
+        let menu = '';
         menu += `<div id="SK_${elementsName}Pane" style="display:none; columns:2; column-gap:20px;">\n`;
-        var tab = elementsName.substring(0,4); // tab prefix
+        const tab = elementsName.substring(0, 4); // tab prefix
         menu += `<input type="checkbox" id="SK_${tab}TabChecker" onchange="sk.gui.selectChildren('SK_${tab}TabChecker','SK_${tab}Check');">`;
         menu += `<label for="SK_${tab}TabChecker">SELECT ALL</label><br>\n`;
-        for (var group of groups) {
-            var label = group[0];
-            var lab = label.substring(0,3); // used for prefixes, "lab" is prefix of "label"
+        for (const group of groups) {
+            const label = group[0];
+            const lab = label.substring(0, 3); // used for prefixes, "lab" is prefix of "label"
             menu += '<p style="break-inside: avoid;">'; // we want grouping to avoid widows/orphans
             menu += `<input type="checkbox" id="SK_${lab}Checker" class="SK_${tab}Check" onchange="sk.gui.selectChildren('SK_${lab}Checker','SK_${lab}Check');">`;
             menu += `<label for="SK_${lab}Checker"><b>${label}</b></label><br>\n`;
 
-            for (var bld of group[1]) {
+            for (const bld of group[1]) {
                 menu += `<input type="checkbox" id="SK_${bld}" class="SK_${lab}Check" onchange="sk.model.${elementsName}.${bld}.enabled=this.checked; sk.model.${elementsName}.${bld}.limit=false">`;
                 menu += `<label style="padding-left:10px;" for="SK_${bld}">${this.model[elementsName][bld].label}</label><br>\n`;
             }
@@ -369,33 +368,33 @@ SK.Gui = class {
     }
 
     autoButton(label, script, id=null) {
-        var cssClass = 'btn nosel modern';
+        let cssClass = 'btn nosel modern';
         if (id) cssClass += ' disabled';
-        var content = `<div class="btnContent" style="padding:unset"><span class="btnTitle">${label}</span></div>`;
-        var button = `<div ${id?'id="'+id+'"':''} class="${cssClass}" style="width:auto; {{grid}}" onclick="${script}">${content}</div>`;
+        const content = `<div class="btnContent" style="padding:unset"><span class="btnTitle">${label}</span></div>`;
+        const button = `<div ${id?'id="'+id+'"':''} class="${cssClass}" style="width:auto; {{grid}}" onclick="${script}">${content}</div>`;
         return button;
     }
 
     autoSwitchButton(label, auto) {
-        var element = 'SK_auto' + auto[0].toUpperCase() + auto.slice(1);
+        const element = 'SK_auto' + auto[0].toUpperCase() + auto.slice(1);
         this.switches[auto] = element;
-        var script = `sk.gui.autoSwitch('${auto}', '${element}');`;
+        const script = `sk.gui.autoSwitch('${auto}', '${element}');`;
         return this.autoButton(label, script, element);
     }
 
     autoDropdown(option, extras, items, script) {
-        var element = `SK_${option}Choice`;
+        const element = `SK_${option}Choice`;
         this.dropdowns[option] = element;
         script ||= `sk.model.option.${option}=this.value;`;
-        var dropdown = `<select id="${element}" style="{{grid}}" onchange="${script}">`;
-        for (var name of extras) {
-            var sel = (name == this.model.option[option]) ? ' selected="selected"' : '';
-            var title = name[0].toUpperCase() + name.slice(1);
+        let dropdown = `<select id="${element}" style="{{grid}}" onchange="${script}">`;
+        for (const name of extras) {
+            const sel = (name == this.model.option[option]) ? ' selected="selected"' : '';
+            const title = name[0].toUpperCase() + name.slice(1);
             dropdown += `<option value="${name}"${sel}>${title}</option>`;
         }
-        for (var item of items) {
-            var sel = (item.name == this.model.option[option]) ? ' selected="selected"' : '';
-            var title = item.title;
+        for (const item of items) {
+            const sel = (item.name == this.model.option[option]) ? ' selected="selected"' : '';
+            let title = item.title;
             if (item.glyph) title = item.glyph + ' ' + title;
             dropdown += `<option value="${item.name}"${sel}>${title}</option>`;
         }
@@ -410,24 +409,24 @@ SK.Gui = class {
     }
 
     refresh() {
-        for (var auto in this.model.auto) {
-            var element = this.switches[auto];
-            $('#'+element).toggleClass('disabled', !this.model.auto[auto])
+        for (const auto in this.model.auto) {
+            const element = this.switches[auto];
+            $('#'+element).toggleClass('disabled', !this.model.auto[auto]);
         }
-        for (var option in this.model.option) {
-            var element = this.dropdowns[option];
+        for (const option in this.model.option) {
+            const element = this.dropdowns[option];
             $('#'+element).val(this.model.option[option]);
         }
-        for (var minor in this.model.minor) {
+        for (const minor in this.model.minor) {
             $('#SK_'+minor).prop('checked', this.model.minor[minor]);
         }
-        for (var menu of ['cathBuildings', 'spaceBuildings', 'timeBuildings']) {
-            for (var entry in this.model[menu]) {
+        for (const menu of ['cathBuildings', 'spaceBuildings', 'timeBuildings']) {
+            for (const entry in this.model[menu]) {
                 $('#SK_'+entry).prop('checked', this.model[menu][entry].enabled);
             }
         }
     }
-}
+};
 
 /**
  * These are the functions which are launched by the runAllAutomation timer
@@ -480,7 +479,7 @@ SK.Tasks = class {
 
             // every 90 seconds, because KG does 80, but that timing bothers me
             {fn:'autoSave',     interval:450, offset:90, override:false},
-        ]
+        ];
 
         // This function keeps track of the game's ticks and uses math to execute these functions at set times relative to the game.
         // Offsets are staggered to spread out the load. (Not that there is much).
@@ -493,8 +492,8 @@ SK.Tasks = class {
 
     taskRunner() {
         if (game.isPaused) return; // we pause too
-        var ticks = game.timer.ticksTotal;
-        for (var task of this.schedule) {
+        const ticks = game.timer.ticksTotal;
+        for (const task of this.schedule) {
             if (task.override || ticks % task.interval == task.offset) {
                 task.override = this[task.fn](task.interval, task.override);
             }
@@ -503,9 +502,9 @@ SK.Tasks = class {
 
     // Show current kitten efficiency in the in-game log
     kittenEfficiency() {
-        var secondsPlayed = game.calendar.trueYear() * game.calendar.seasonsPerYear * game.calendar.daysPerSeason * game.calendar.ticksPerDay / game.ticksPerSecond;
-        var numberKittens = game.resPool.get('kittens').value;
-        var curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
+        const secondsPlayed = game.calendar.trueYear() * game.calendar.seasonsPerYear * game.calendar.daysPerSeason * game.calendar.ticksPerDay / game.ticksPerSecond;
+        const numberKittens = game.resPool.get('kittens').value;
+        const curEfficiency = (numberKittens - 70) / (secondsPlayed / 3600);
         game.msg('Your current efficiency is ' + parseFloat(curEfficiency).toFixed(2) + ' Paragon per hour.');
     }
 
@@ -525,20 +524,20 @@ SK.Tasks = class {
         //
         //
         //
-        var total = {};
-        for (var effect of ['energyProduction', 'energyConsumption']) {
-            var sign = effect == 'energyProduction' ? '+' : '-';
+        const total = {};
+        for (const effect of ['energyProduction', 'energyConsumption']) {
+            const sign = effect == 'energyProduction' ? '+' : '-';
             total[effect] = 0;
-            for (var source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
-                for (var shim of source) {
-                    shim = shim.buildings ? shim.buildings : [shim]
-                    for (var building of shim) {
-                        var stage = building.stage ? building.stages[building.stage] : building;
+            for (const source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
+                for (let shim of source) {
+                    shim = shim.buildings ? shim.buildings : [shim];
+                    for (const building of shim) {
+                        const stage = building.stage ? building.stages[building.stage] : building;
                         if (! stage.effects || building.val == 0) continue;
-                        var eper = stage.effects[effect];
+                        let eper = stage.effects[effect];
                         if (building.name == 'pasture' && effect == 'energyProduction') {
                             // deal with Solar Farms. Peak is in summer(1), Low in winter(3). Report low, mention high.
-                            var cep = building.stages[building.stage].calculateEnergyProduction;
+                            const cep = building.stages[building.stage].calculateEnergyProduction;
                             eper = cep(game, 3);
                             total.summer = (cep(game, 1) - eper) * building.on;
                         }
@@ -556,11 +555,11 @@ SK.Tasks = class {
 
     ensureContentExists(tabId) {
         // only work for visible tabs
-        var tab = game.tabs.find(function(tab){return tab.tabId==tabId});
+        const tab = game.tabs.find((tab) => tab.tabId==tabId);
         if (! tab.visible) return false;
 
-        var doRender = false;
-        switch(tabId) {
+        let doRender = false;
+        switch (tabId) {
             case 'Science':
                 doRender = (tab.buttons.length == 0 || ! tab.policyPanel);
                 break;
@@ -578,8 +577,8 @@ SK.Tasks = class {
             case 'Space':
                 doRender = (! tab.planetPanels || ! tab.GCPanel);
                 if (tab.planetPanels) {
-                    var planetCount = 0
-                    for (var planet of game.space.planets) {
+                    let planetCount = 0;
+                    for (const planet of game.space.planets) {
                         if (planet.unlocked) planetCount += 1;
                     }
                     doRender ||= tab.planetPanels.length < planetCount;
@@ -596,8 +595,8 @@ SK.Tasks = class {
 
         if (doRender) {
             // create and get DOM element
-            var div = $(`div.tabInner.${tabId}`)[0];
-            var oldTab = null;
+            let div = $(`div.tabInner.${tabId}`)[0];
+            let oldTab = null;
             if (! div) {
                 oldTab = game.ui.activeTabId;
                 game.ui.activeTabId = tabId;
@@ -615,10 +614,10 @@ SK.Tasks = class {
         }
 
         // For things we need to do post-render()
-        switch(tabId) {
+        switch (tabId) {
             case 'Time':
                 // cfPanel only becomes "visible" on an update()
-                if (!game.timeTab.cfPanel.visible && game.workshop.get("chronoforge").researched) game.timeTab.update();
+                if (!game.timeTab.cfPanel.visible && game.workshop.get('chronoforge').researched) game.timeTab.update();
                 break;
         }
     }
@@ -648,16 +647,18 @@ SK.Tasks = class {
 
     // Build buildings automatically
     autoBuild(ticksPerCycle) {
-        var built = false;
+        let built = false;
         if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
-            var cb = this.model.cathBuildings;
+            const cb = this.model.cathBuildings;
             for (var button of game.bldTab.buttons) {
                 if (! button.model.metadata) continue;
-                var name = button.model.metadata.name;
+                const name = button.model.metadata.name;
                 if (button.model.enabled && cb[name].enabled
                         && (!cb[name].limit || button.model.metadata.val < cb[name].limit)) {
                     button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {built = true; button.update();}
+                        if (result) {
+                            built = true; button.update();
+                        }
                     });
                 }
             }
@@ -688,29 +689,29 @@ SK.Tasks = class {
         // In particular, we need to only craft wood if there's room
         // AND we need to make room by crafting
         if (this.model.auto.craft && game.workshopTab.visible) {
-            for (var res of game.workshop.crafts) {
-                var output = res.name;
-                var inputs = res.prices;
-                var outRes = game.resPool.get(output);
+            for (const res of game.workshop.crafts) {
+                const output = res.name;
+                const inputs = res.prices;
+                const outRes = game.resPool.get(output);
                 if (! res.unlocked) continue;
                 if (outRes.type != 'common') continue; // mostly to prevent relic+tc->bloodstone
 
-                var craftCount = Infinity;
-                var minimumReserve = Infinity;
-                for (var input of inputs) {
-                    var inRes = game.resPool.get(input.name);
-                    var outVal = outRes.value / game.getCraftRatio(outRes.tag);
-                    var inVal = inRes.value / input.val;
+                let craftCount = Infinity;
+                let minimumReserve = Infinity;
+                for (const input of inputs) {
+                    const inRes = game.resPool.get(input.name);
+                    const outVal = outRes.value / game.getCraftRatio(outRes.tag);
+                    const inVal = inRes.value / input.val;
                     craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
 
                     if (this.model.books.includes(output) && this.model.option.book != 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
-                        var outputIndex = this.model.books.indexOf(output);
-                        var choiceIndex = this.model.books.indexOf(this.model.option.book);
+                        const outputIndex = this.model.books.indexOf(output);
+                        const choiceIndex = this.model.books.indexOf(this.model.option.book);
                         if (outputIndex > choiceIndex) craftCount = 0;
                     } else if (inRes.maxValue != 0) {
                         // primary resource
-                        var resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
+                        const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
                         if (inRes.value >= (inRes.maxValue - resourcePerCycle) || resourcePerCycle >= inRes.maxValue) {
                             craftCount = Math.min(craftCount, resourcePerCycle / input.val);
                         } else {
@@ -718,7 +719,7 @@ SK.Tasks = class {
                         }
                     } else {
                         // secondary resource: general
-                        var inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
+                        const inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
                         if (outVal > inMSRR) {
                             craftCount = 0;
                         } else {
@@ -745,24 +746,24 @@ SK.Tasks = class {
     autoMinor(ticksPerCycle) {
         if (this.model.minor.feed) {
             if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').unlocked) {
-                var energy = game.diplomacy.get('leviathans').energy || 0;
+                const energy = game.diplomacy.get('leviathans').energy || 0;
                 if (energy < game.diplomacy.getMarkerCap()) {
                     game.diplomacy.feedElders();
                 }
             }
         }
         if (this.model.minor.observe) {
-            var checkObserveBtn = document.getElementById('observeBtn');
+            const checkObserveBtn = document.getElementById('observeBtn');
             if (checkObserveBtn) checkObserveBtn.click();
         }
         if (this.model.minor.promote) {
-            var leader = game.village.leader;
+            const leader = game.village.leader;
             if (leader) {
-                var expToPromote = game.village.getRankExp(leader.rank);
-                var goldToPromote = 25 * (leader.rank + 1);
+                const expToPromote = game.village.getRankExp(leader.rank);
+                const goldToPromote = 25 * (leader.rank + 1);
                 if (leader.exp >= expToPromote && game.resPool.get('gold').value >= goldToPromote) {
                     if (game.village.sim.promote(leader) > 0) {
-                        var census = game.villageTab.censusPanel.census;
+                        const census = game.villageTab.censusPanel.census;
                         census.renderGovernment(census.container);
                         census.update();
                     }
@@ -774,7 +775,7 @@ SK.Tasks = class {
     // Hunt automatically
     autoHunt(ticksPerCycle) {
         if (this.model.auto.hunt && game.villageTab.visible) {
-            var catpower = game.resPool.get('manpower');
+            const catpower = game.resPool.get('manpower');
             if (catpower.value > (catpower.maxValue - 1)) {
                 game.village.huntAll();
             }
@@ -786,13 +787,13 @@ SK.Tasks = class {
 
     // Build space stuff automatically
     autoSpace(ticksPerCycle) {
-        var built = false;
+        let built = false;
         if (this.model.auto.build && game.spaceTab.visible) {
             this.ensureContentExists('Space');
 
             // Build space buildings
-            var sb = this.model.spaceBuildings;
-            for (var planet of game.spaceTab.planetPanels) {
+            const sb = this.model.spaceBuildings;
+            for (const planet of game.spaceTab.planetPanels) {
                 for (var spBuild of planet.children) {
                     if (sb[spBuild.id].enabled && game.space.getBuilding(spBuild.id).unlocked
                             && (!sb[spBuild.id].limit || spBuild.model.metadata.val < sb[spBuild.id].limit)) {
@@ -800,7 +801,9 @@ SK.Tasks = class {
                         if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                         if (spBuild.model.enabled) {
                             spBuild.controller.buyItem(spBuild.model, {}, function(result) {
-                                if (result) {built = true; spBuild.update();}
+                                if (result) {
+                                    built = true; spBuild.update();
+                                }
                             });
                         }
                     }
@@ -815,14 +818,16 @@ SK.Tasks = class {
                 if (program.model.metadata.unlocked && program.model.on == 0) {
                     // hack to allow a limit on how far out to go
                     if (typeof(this.model.minor.program) == 'number') {
-                        let chart = program.model.metadata.prices.find(p => p.name === 'starchart');
+                        const chart = program.model.metadata.prices.find((p) => p.name === 'starchart');
                         if (this.model.minor.program < chart.val) continue;
                     }
                     // normal path
                     if (! program.model.enabled) program.controller.updateEnabled(program.model);
                     if (program.model.enabled) {
                         program.controller.buyItem(program.model, {}, function(result) {
-                            if (result) {built = true; program.update();}
+                            if (result) {
+                                built = true; program.update();
+                            }
                         });
                     }
                 }
@@ -834,28 +839,30 @@ SK.Tasks = class {
 
     // Build religion/time stuff automatically
     autoTime(ticksPerCycle) {
-        var built = false;
+        let built = false;
         if (this.model.auto.build) {
-            var buttonGroups = [
+            const buttonGroups = [
                 game.religionTab?.zgUpgradeButtons,
                 game.religionTab?.ctPanel?.children[0]?.children,
                 game.timeTab?.cfPanel?.children[0]?.children,
-                game.timeTab?.vsPanel?.children[0]?.children
+                game.timeTab?.vsPanel?.children[0]?.children,
             ];
             this.ensureContentExists('Religion');
             this.ensureContentExists('Time');
 
             // TODO: special case for Markers and Tears
-            var tb = this.model.timeBuildings;
-            for (var buttons of buttonGroups) {
+            const tb = this.model.timeBuildings;
+            for (const buttons of buttonGroups) {
                 if (buttons) {
-                    for (var button of buttons) {
+                    for (const button of buttons) {
                         if (tb[button.id]?.enabled && button.model.metadata.unlocked
                                 && (!tb[button.id].limit || button.model.metadata.val < tb[button.id].limit)) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
                                 button.controller.buyItem(button.model, {}, function(result) {
-                                    if (result) {built = true; button.update();}
+                                    if (result) {
+                                        built = true; button.update();
+                                    }
                                 });
                             }
                         }
@@ -869,9 +876,9 @@ SK.Tasks = class {
     // Festival automatically
     autoParty(ticksPerCycle) {
         if (this.model.auto.party && game.science.get('drama').researched && game.villageTab.visible) {
-            var catpower = game.resPool.get('manpower').value;
-            var culture = game.resPool.get('culture').value;
-            var parchment = game.resPool.get('parchment').value;
+            const catpower = game.resPool.get('manpower').value;
+            const culture = game.resPool.get('culture').value;
+            const parchment = game.resPool.get('parchment').value;
 
             if (catpower > 1500 && culture > 5000 && parchment > 2500) {
                 if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays < 400*10) {
@@ -887,8 +894,8 @@ SK.Tasks = class {
     // Control Energy Consumption
     energyControl(ticksPerCycle) {
         if (this.model.auto.energy) {
-            var proVar = game.resPool.energyProd;
-            var conVar = game.resPool.energyCons;
+            const proVar = game.resPool.energyProd;
+            let conVar = game.resPool.energyCons;
 
             // TODO:
             // generally when I have to turn things off:
@@ -956,12 +963,12 @@ SK.Tasks = class {
 
     smartAssign() {
         if (game.calendar.day < 0) return false; // temporal paradox messes up the cache
-        var limits={};
-        var kittens = game.village.getKittens();
-        var fugit = game.time.isAccelerated ? 1.5 : 1;
+        const limits={};
+        const kittens = game.village.getKittens();
+        const fugit = game.time.isAccelerated ? 1.5 : 1;
 
         // Default Job Ratio. Will try to aim for this.
-        var jobRatio = {
+        const jobRatio = {
             'farmer':    0.05,
             'woodcutter':0.20,
             'miner':     0.20,
@@ -972,12 +979,12 @@ SK.Tasks = class {
         };
 
         // first calculate (and enforce) "hard" limits:
-        for (var job of game.village.jobs) {
+        for (const job of game.village.jobs) {
             // We need a better way of finding out what a kitten produces in each job
-            var res = null;
-            var ticksToFull = null;
+            let res = null;
+            let ticksToFull = null;
             if (job.value === 0) continue; // can't calculate
-            switch(job.name) {
+            switch (job.name) {
                 case 'farmer':
                     // no limit.
                     break;
@@ -1009,7 +1016,7 @@ SK.Tasks = class {
                     break;
             }
             if (res && ticksToFull) {
-                var perKittenSec = res.perTickCached * fugit * 5 / job.value;
+                const perKittenSec = res.perTickCached * fugit * 5 / job.value;
                 if (perKittenSec > 0) {
                     limits[job.name] = Math.round((res.maxValue / perKittenSec) / (ticksToFull / 5));
                 }
@@ -1032,9 +1039,9 @@ SK.Tasks = class {
          **/
 
         // find jobs with less than half target
-        var needs = {};
-        for (var job of game.village.jobs) {
-            var minimum = Math.floor(jobRatio[job.name] * kittens / 2);
+        const needs = {};
+        for (const job of game.village.jobs) {
+            let minimum = Math.floor(jobRatio[job.name] * kittens / 2);
             if (limits[job.name]) minimum = Math.min(minimum, limits[job.name]);
             if (job.value < minimum) needs[job.name] = minimum - job.value;
             if (job.name === 'farmer' && game.resPool.get('catnip').perTickCached < 0) {
@@ -1043,21 +1050,21 @@ SK.Tasks = class {
         }
 
         // try to satisfy from free kittens
-        var avails = game.village.getFreeKittens();
-        var totalNeed = 0;
-        for (var need in needs) totalNeed += needs[need];
+        let avails = game.village.getFreeKittens();
+        let totalNeed = 0;
+        for (const need in needs) totalNeed += needs[need];
 
         // figure current distribution
-        var distribution = []; // [0:name, 1:count, 2:expected, 3:count/expected]
-        for (var job of game.village.jobs) {
+        let distribution = []; // [0:name, 1:count, 2:expected, 3:count/expected]
+        for (const job of game.village.jobs) {
             if (job.value === 0) continue;
             distribution.push([job.name, job.value, kittens * jobRatio[job.name], job.value/kittens * jobRatio[job.name]]);
         }
-        distribution.sort(function(a,b){return b[3] - a[3];});
+        distribution.sort((a, b) => b[3] - a[3]);
 
         // allocate necessary losses to the most over-allocated
         untilNeed: while (avails < totalNeed) {
-            for (var i=0; i<distribution.length; i+=1) {
+            for (let i=0; i<distribution.length; i+=1) {
                 if (i+1 >= distribution.length || distribution[i][3] > distribution[i+1][3]) {
                     distribution[i][1] -= 1;
                     distribution[i][3] = distribution[i][1] / distribution[i][2];
@@ -1065,14 +1072,14 @@ SK.Tasks = class {
                     continue untilNeed;
                 }
             }
-            console.log("UH OH!"); // TODO: this happens.
+            console.log('UH OH!'); // TODO: this happens.
             break; // this should not be possible, but infinite loops are really bad
         }
         // lose them
-        for (var job of game.village.jobs) {
-            for (var i=0; i<distribution.length; i+=1) {
+        for (const job of game.village.jobs) {
+            for (let i=0; i<distribution.length; i+=1) {
                 if (job.name !== distribution[i][0]) continue;
-                var sack = job.value - distribution[i][1];
+                const sack = job.value - distribution[i][1];
                 if (sack > 0) {
                     game.village.sim.removeJob(job.name, sack);
                     avails += sack;
@@ -1081,12 +1088,12 @@ SK.Tasks = class {
         }
 
         // do the needful
-        for (var job of game.village.jobs) {
-            var need = needs[job.name];
+        for (const job of game.village.jobs) {
+            const need = needs[job.name];
             if (need) {
                 game.village.assignJob(job, need);
                 avails -= need;
-                for (var i=0; i<distribution.length; i+=1) {
+                for (let i=0; i<distribution.length; i+=1) {
                     if (job.name !== distribution[i][0]) continue;
                     distribution[i][1] += need;
                     distribution[i][3] = distribution[i][1] / distribution[i][2];
@@ -1095,40 +1102,40 @@ SK.Tasks = class {
         }
 
         // use up any remaining space
-        delete distribution['farmer'];
+        delete distribution.farmer;
         distribution.reverse();
-        distribution = distribution.filter(function(x){
-            return x[0] !== 'farmer' && (!limits[x[0]] ||  x[1] < limits[x[0]]);
+        distribution = distribution.filter(function(x) {
+            return x[0] !== 'farmer' && (!limits[x[0]] || x[1] < limits[x[0]]);
         });
         untilAvail: while (avails > 0) {
-            for (var i=0; i<distribution.length; i+=1) {
+            for (let i=0; i<distribution.length; i+=1) {
                 if (i+1 >= distribution.length || distribution[i][3] < distribution[i+1][3]) {
                     distribution[i][1] += 1;
                     avails -= 1; // haven't done it yet, it's in "add them"
                     distribution[i][3] = distribution[i][1] / distribution[i][2];
                     if (distribution[i][1] >= limits[distribution[i][0]]) {
-                        distribution = distribution.filter(function(x){return !limits[x[0]] ||  x[1] < limits[x[0]];});
+                        distribution = distribution.filter((x) => !limits[x[0]] || x[1] < limits[x[0]]);
                     }
                     continue untilAvail;
                 }
             }
-            console.log("UH OH!");
+            console.log('UH OH!');
             break; // this should not be possible, but infinite loops are really bad
         }
         // add them
-        for (var job of game.village.jobs) {
-            for (var i=0; i<distribution.length; i+=1) {
+        for (const job of game.village.jobs) {
+            for (let i=0; i<distribution.length; i+=1) {
                 if (job.name !== distribution[i][0]) continue;
-                var hire = distribution[i][1] - job.value;
+                const hire = distribution[i][1] - job.value;
                 if (hire) game.village.assignJob(job, hire);
             }
         }
-        return false
+        return false;
     }
 
     // Auto assign new kittens to selected job
     autoAssign(ticksPerCycle) {
-        var assigned = false;
+        let assigned = false;
         if (this.model.auto.assign && game.villageTab.visible) {
             if (this.model.option.assign === 'smart') {
                 assigned = this.smartAssign();
@@ -1159,14 +1166,14 @@ SK.Tasks = class {
     }
 
     autoTechHelper(buttons, skipUpdate) {
-        var acted = false;
-        var science = game.resPool.get('science').value;
-        var bestButton = null;
-        var bestCost = Infinity;
-        techloop: for (var button of buttons) {
+        let acted = false;
+        const science = game.resPool.get('science').value;
+        let bestButton = null;
+        let bestCost = Infinity;
+        techloop: for (const button of buttons) {
             if (button.model.metadata.researched || ! button.model.metadata.unlocked) continue;
-            var cost = 0;
-            for (var price of button.model.prices) {
+            let cost = 0;
+            for (const price of button.model.prices) {
                 if (price.name == 'science') {
                     cost = price.val;
                 } else if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
@@ -1183,7 +1190,9 @@ SK.Tasks = class {
         }
         if (bestButton) {
             bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                if (result) {acted = true; bestButton.update();}
+                if (result) {
+                    acted = true; bestButton.update();
+                }
             });
         }
         return acted;
@@ -1191,20 +1200,22 @@ SK.Tasks = class {
 
     // Auto buy religion upgrades
     autoReligion(ticksPerCycle) {
-        var bought = false;
-        var futureBuy = false;
+        let bought = false;
+        let futureBuy = false;
         if (this.model.auto.religion && game.religionTab.visible) {
             this.ensureContentExists('Religion');
 
-            for (var button of game.religionTab.rUpgradeButtons) {
+            for (const button of game.religionTab.rUpgradeButtons) {
                 if (! button.model.enabled) button.update();
                 if (button.model.enabled) {
                     button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) { bought = true; button.update(); }
+                        if (result) {
+                            bought = true; button.update();
+                        }
                     });
                 }
                 // only things with a priceRatio cap, check if they have
-                futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited)
+                futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited);
             }
             if (! futureBuy && this.model.minor.praiseAfter && ! this.model.auto.praise) {
                 sk.gui.autoSwitch('praise', 'SK_autoPraise');
@@ -1215,35 +1226,35 @@ SK.Tasks = class {
 
     // Trade automatically
     autoTrade(ticksPerCycle) {
-        var traded = false;
+        let traded = false;
         if (this.model.auto.trade && game.diplomacyTab.visible) {
-            var goldResource = game.resPool.get('gold');
-            var goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
-            var powerResource = game.resPool.get('manpower');
-            var powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
-            var powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
-            var sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
+            const goldResource = game.resPool.get('gold');
+            const goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
+            const powerResource = game.resPool.get('manpower');
+            let powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
+            powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
+            let sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
 
             // TODO: capping gold can take too long, use SRS to compensate
             // fuck that noise. Write a proper autoTrade, with per civ toggles in the Options menu
-            var maxTrades = 0;
+            let maxTrades = 0;
             if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
                 maxTrades = goldResource.value / 15;
             } else {
                 maxTrades = goldPerCycle * this.model.option.minSecResRatio / 100 / 15; // consume up to mSRR% of production
             }
             if (maxTrades > 0) {
-                var tiRes = game.resPool.get('titanium');
-                var unoRes = game.resPool.get('unobtainium');
+                const tiRes = game.resPool.get('titanium');
+                const unoRes = game.resPool.get('unobtainium');
 
                 if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && ! this.model.minor.noElderTrade) {
                     game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
                     traded = true;
                 } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
                     // don't waste the iron, make some space for it.
-                    var ironRes = game.resPool.get('iron');
-                    var sellIron = game.diplomacy.get('zebras').sells[0];
-                    var expectedIron = sellIron.value * sellCount *
+                    const ironRes = game.resPool.get('iron');
+                    const sellIron = game.diplomacy.get('zebras').sells[0];
+                    const expectedIron = sellIron.value * sellCount *
                         (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
                         (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
                     if (ironRes.value > (ironRes.maxValue - expectedIron)) {
@@ -1251,8 +1262,8 @@ SK.Tasks = class {
                     }
 
                     // don't overdo it
-                    var deltaTi = tiRes.maxValue - tiRes.value;
-                    var expectedTi = game.resPool.get('ship').value * 0.03;
+                    const deltaTi = tiRes.maxValue - tiRes.value;
+                    const expectedTi = game.resPool.get('ship').value * 0.03;
                     sellCount = Math.ceil(Math.min(maxTrades, sellCount, deltaTi / expectedTi));
                     game.diplomacy.tradeMultiple(game.diplomacy.get('zebras'), sellCount);
                     traded = false; // don't back-to-back zebra trade
@@ -1265,51 +1276,51 @@ SK.Tasks = class {
     // auxiliary function for autoShatter
     autoDoShatter(years) {
         // limit to 5 years per tick, mostly to allow crafting time
-        var timeslip = false;
+        let timeslip = false;
         if (years > 5) {
             years = 5;
             timeslip = true;
         }
 
         // mass craft
-        var shatterTCGain = game.getEffect('shatterTCGain') * (1 + game.getEffect('rrRatio'));
-        var cal = game.calendar;
-        var ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
+        const shatterTCGain = game.getEffect('shatterTCGain') * (1 + game.getEffect('rrRatio'));
+        const cal = game.calendar;
+        const ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
         this.autoCraft(shatterTCGain * ticksPassing);
 
         // do shatter
-        var btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
+        const btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
         btn.controller.doShatterAmt(btn.model, years);
         return timeslip;
     }
 
     // Keep Shattering as long as Space-Time is cool enough
     autoShatter(ticksPerCycle, shattering) {
-        var timeslip = false;
+        let timeslip = false;
         if (this.model.auto.shatter || this.model.auto.cycle) {
             this.ensureContentExists('Time');
             if (game.timeTab.cfPanel.visible && game.calendar.day >= 0) { // avoid shattering DURING paradox
-                var startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
-                var lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect('heatPerTick'));
-                var startStorm = shattering || (this.model.minor.wait4void ? startOfSeason : true) && lowHeat;
+                const startOfSeason = game.calendar.day * game.calendar.ticksPerDay < 3 * ticksPerCycle;
+                const lowHeat = game.time.heat < Math.max(5, ticksPerCycle * game.getEffect('heatPerTick'));
+                const startStorm = shattering || (this.model.minor.wait4void ? startOfSeason : true) && lowHeat;
 
                 // find length of shatter storm
-                var shatter = 0;
+                let shatter = 0;
                 if (this.model.auto.shatter && startStorm) {
                     // how many shatters worth of heat can we afford?
-                    var factor = game.challenges.getChallenge('1000Years').researched ? 5 : 10;
-                    var shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
+                    const factor = game.challenges.getChallenge('1000Years').researched ? 5 : 10;
+                    shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
                 }
 
                 // adjust to end in the right cycle
-                var cyclename = this.model.option.cycle;
-                var cycle = game.calendar.cycles.findIndex(function(c){return c.name == cyclename});
+                const cyclename = this.model.option.cycle;
+                const cycle = game.calendar.cycles.findIndex((c) => c.name === cyclename);
                 if (this.model.auto.cycle && game.calendar.cycle != cycle) {
                     // desired cycle: sk.model.option.cycle
                     // current cycle: game.calendar.cycle
                     // year in cycle: game.calendar.cycleYear
-                    var deltaCycle = (cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
-                    var yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
+                    const deltaCycle = (cycle - game.calendar.cycle + game.calendar.cycles.length) % game.calendar.cycles.length;
+                    const yearsToCycle = deltaCycle*5 - game.calendar.cycleYear;
                     shatter = Math.floor(shatter / 50)*50 + yearsToCycle;
                 }
 
@@ -1325,20 +1336,22 @@ SK.Tasks = class {
     // Build Embassies automatically
     autoEmbassy(ticksPerCycle) {
         // TODO: something in this function is damaging responsiveness
-        var built = false;
-        if (this.model.auto.embassy && game.science.get("writing").researched && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
-            var culture = game.resPool.get('culture');
+        let built = false;
+        if (this.model.auto.embassy && game.science.get('writing').researched && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
+            const culture = game.resPool.get('culture');
             if (culture.value >= culture.maxValue * 0.99) { // will often exceed due to MS fluctuations
-                var panels = game.diplomacyTab.racePanels;
-                var btn = panels[0].embassyButton;
-                for (var z = 1; z < panels.length; z++) {
-                    var candidate = panels[z].embassyButton;
+                const panels = game.diplomacyTab.racePanels;
+                let btn = panels[0].embassyButton;
+                for (let z = 1; z < panels.length; z++) {
+                    const candidate = panels[z].embassyButton;
                     if (candidate && candidate.model.prices[0].val < btn.model.prices[0].val) {
                         btn = candidate;
                     }
                 }
                 btn.controller.buyItem(btn.model, {}, function(result) {
-                    if (result) {built = true; btn.update();}
+                    if (result) {
+                        built = true; btn.update();
+                    }
                 });
             }
         }
@@ -1349,13 +1362,13 @@ SK.Tasks = class {
 
     // Explore for new Civs
     autoExplore(ticksPerCycle) {
-        var available = false;
+        let available = false;
         if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get('manpower').value >= 1000) {
             this.ensureContentExists('Trade');
 
-            for (var race of game.diplomacy.races) {
+            for (const race of game.diplomacy.races) {
                 if (race.unlocked) continue;
-                switch(race.name) {
+                switch (race.name) {
                     case 'lizards': case 'sharks': case 'griffins':
                         available = true;
                         break;
@@ -1379,7 +1392,7 @@ SK.Tasks = class {
                 if (available) break;
             }
             if (available) {
-                var button = game.diplomacyTab.exploreBtn;
+                const button = game.diplomacyTab.exploreBtn;
                 button.controller.buyItem(button.model, {}, function(result) {
                     if (result) {
                         available = true;
@@ -1393,7 +1406,7 @@ SK.Tasks = class {
 
     // Auto buy unicorn upgrades
     autoUnicorn(ticksPerCycle) {
-        var acted = false;
+        let acted = false;
         if (this.model.auto.unicorn && game.religionTab.visible) {
             this.ensureContentExists('Religion');
 
@@ -1401,30 +1414,31 @@ SK.Tasks = class {
              * Each Tower causes a 0.05% chance for a rift per game-day
              * Each rift produces 500 Unicorns * (Unicorn Production Bonus)/10
              */
-            var riftUnicorns = 500 * (1 + game.getEffect('unicornsRatioReligion') * 0.1);
-            var unicornChanceRatio = 1.1 * (1 + game.getEffect('timeRatio') * 0.25);
-            var upsprc = riftUnicorns * unicornChanceRatio / 2; // unicorns per second per riftChance
-            var ups = 5 * game.getResourcePerTick('unicorns') / (1 + game.getEffect('unicornsRatioReligion'));
+            const riftUnicorns = 500 * (1 + game.getEffect('unicornsRatioReligion') * 0.1);
+            const unicornChanceRatio = 1.1 * (1 + game.getEffect('timeRatio') * 0.25);
+            const upsprc = riftUnicorns * unicornChanceRatio / 2; // unicorns per second per riftChance
+            const ups = 5 * game.getResourcePerTick('unicorns') / (1 + game.getEffect('unicornsRatioReligion'));
             // Constants for Ivory Meteors
-            var meteorChance = game.getEffect('ivoryMeteorChance') * unicornChanceRatio / 2;
-            var ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect('ivoryMeteorRatio'));
+            const meteorChance = game.getEffect('ivoryMeteorChance') * unicornChanceRatio / 2;
+            const ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect('ivoryMeteorRatio'));
 
             // find which is the best value
-            var bestButton = null;
-            var bestValue = 0.0;
-            for (var button of game.religionTab.zgUpgradeButtons) {
+            let bestButton = null;
+            let bestValue = 0.0;
+            for (const button of game.religionTab.zgUpgradeButtons) {
                 if (button.model.metadata.unlocked) {
+                    let value = 0;
                     if (! this.model.minor.unicornIvory) {
-                        var tearCost = button.model.prices.find(function(element){return element.name==='tears'});
+                        const tearCost = button.model.prices.find((element) => element.name==='tears');
                         if (tearCost == null) continue;
-                        var ratio = button.model.metadata.effects.unicornsRatioReligion;
-                        var rifts = button.model.metadata.effects.riftChance || 0;
-                        var value = (ratio * ups + rifts * upsprc) / tearCost.val;
+                        const ratio = button.model.metadata.effects.unicornsRatioReligion;
+                        const rifts = button.model.metadata.effects.riftChance || 0;
+                        value = (ratio * ups + rifts * upsprc) / tearCost.val;
                     } else {
-                        var ivoryCost = button.model.prices.find(function(element){return element.name==='ivory'});
+                        const ivoryCost = button.model.prices.find((element) => element.name==='ivory');
                         if (ivoryCost == null) continue;
-                        var ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
-                        var chance = button.model.metadata.effects.ivoryMeteorChance || 0;
+                        const ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
+                        const chance = button.model.metadata.effects.ivoryMeteorChance || 0;
                         value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
                     }
                     if (value > bestValue) {
@@ -1436,29 +1450,32 @@ SK.Tasks = class {
 
             // can we afford it?
             if (bestButton != null) {
-                var otherCosts = true;
-                for (var price of bestButton.model.prices) {
+                let tearCost = 0;
+                let otherCosts = true;
+                for (const price of bestButton.model.prices) {
                     if (price.name == 'tears') {
-                        var tearCost = price.val;
+                        tearCost = price.val;
                     } else if (price.val > game.resPool.get(price.name).value) {
                         otherCosts = false;
                     }
                 }
                 if (otherCosts) {
-                    var unicorns = game.resPool.get('unicorns').value;
-                    var tears = game.resPool.get('tears').value;
-                    var zigs = game.bld.get('ziggurat').on;
-                    var available = tears + Math.floor(unicorns / 2500) * zigs;
+                    const unicorns = game.resPool.get('unicorns').value;
+                    const tears = game.resPool.get('tears').value;
+                    const zigs = game.bld.get('ziggurat').on;
+                    const available = tears + Math.floor(unicorns / 2500) * zigs;
                     if (available > tearCost) {
                         if (tears < tearCost) {
-                            var sacButton = game.religionTab.sacrificeBtn;
+                            const sacButton = game.religionTab.sacrificeBtn;
                             // XXX: I don't like calling an internal function like _transform
                             // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
                             sacButton.controller._transform(sacButton.model, Math.ceil((tearCost - tears) / zigs));
                         }
                         if ( ! bestButton.model.enabled) bestButton.update();
                         bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                            if (result) {acted = true; bestButton.update();}
+                            if (result) {
+                                acted = true; bestButton.update();
+                            }
                         });
                     }
                 }
@@ -1472,7 +1489,7 @@ SK.Tasks = class {
         // When the price is > 1100 it loses 20-30% of its value
         // 880+ε is the highest it could be after an implosion
         if (this.model.auto.bcoin && game.diplomacy.get('leviathans').unlocked && game.resPool.get('relic').value > 0) {
-            var eldersPanel = game.diplomacyTab.racePanels.find(function(p){return p.race.name == 'leviathans'});
+            const eldersPanel = game.diplomacyTab.racePanels.find((p) => p.race.name === 'leviathans');
             if (! eldersPanel || ! eldersPanel.buyBcoin) return false;
             if (game.calendar.cryptoPrice < 1090) {
                 game.diplomacy.buyBcoin();
@@ -1486,10 +1503,10 @@ SK.Tasks = class {
     // Automatically use flux for fixing CCs and tempus fugit
     autoFlux(ticksPerCycle) {
         if (this.model.auto.flux && game.timeTab.visible) {
-            var flux = game.resPool.get('temporalFlux').value;
-            var reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
-            var fixcost = 3000;
-            var forfugit = game.time.heat / game.getEffect('heatPerTick');
+            const flux = game.resPool.get('temporalFlux').value;
+            const reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
+            const fixcost = 3000;
+            const forfugit = game.time.heat / game.getEffect('heatPerTick');
             if (flux > reserve + forfugit + fixcost) {
                 this.fixCryochamber();
                 if (flux > 0) game.time.isAccelerated = true;
@@ -1509,7 +1526,7 @@ SK.Tasks = class {
     }
 
     fixCryochamber() {
-        var button = game.timeTab.vsPanel.children[0].children[0];
+        const button = game.timeTab.vsPanel.children[0].children[0];
         if (button.model) {
             button.controller.buyItem(button.model, {}, function(result) {
                 if (result) button.update();
@@ -1526,7 +1543,7 @@ SK.Tasks = class {
     autoSave(ticksPerCycle) {
         sk.saveOptions();
     }
-}
+};
 
 /**
  * These are the autoPlay scripts. Highly Experimental
@@ -1565,13 +1582,13 @@ SK.Scripts = class {
         if (this.state.length == 0) return;
 
         // prep
-        var oldConfirm = game.ui.confirm; // for policies and building upgrades
+        const oldConfirm = game.ui.confirm; // for policies and building upgrades
         game.ui.confirm = this.alwaysYes;
 
         // action
-        var action = this.state.shift();
+        const action = this.state.shift();
         console.log(`Doing ${action}  --  [${this.state}]`);
-        var done = this[script](action);
+        const done = this[script](action);
         if (done) {
             sk.gui.refresh();
         } else {
@@ -1591,13 +1608,15 @@ SK.Scripts = class {
     /*** These are utility functions to simplify scripts below ***/
 
     singleBuild(buttons, building) {
-        var built = false;
+        let built = false;
         for (var button of buttons) {
             if (button.model.metadata?.name != building) continue;
             if (button.model.on > 0) return true; // we've already got one
             if (button.model.enabled) {
                 button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {built = true; button.update();}
+                    if (result) {
+                        built = true; button.update();
+                    }
                 });
             }
         }
@@ -1605,9 +1624,9 @@ SK.Scripts = class {
     }
 
     singleTech(buttons, targets) {
-        var count = 0;
+        let count = 0;
         for (var button of buttons) {
-            var metadata = button.model.metadata;
+            const metadata = button.model.metadata;
             if (metadata.blocked) continue;
             if (targets.includes(metadata.name)) {
                 if (metadata.researched || metadata.on) {
@@ -1627,10 +1646,10 @@ SK.Scripts = class {
     }
 
     singleUpgrade(buildings) {
-        var count = 0;
-        for (var button of game.bldTab.buttons) {
+        let count = 0;
+        for (const button of game.bldTab.buttons) {
             if (! button.controller.upgrade) continue; // easy filter for upgradable buildings
-            var metadata = button.model.metadata;
+            const metadata = button.model.metadata;
             if (buildings.includes(metadata.name)) {
                 if (metadata.stage == metadata.stages.length - 1) {
                     count += 1;
@@ -1644,19 +1663,19 @@ SK.Scripts = class {
     }
 
     craftFor(manager, buildings) {
-        for (let bName of buildings) {
-            let building = manager.get(bName);
+        for (const bName of buildings) {
+            const building = manager.get(bName);
             if (building.researched) continue;
-            for (let price of building.prices) {
-                let res = game.resPool.get(price.name);
+            for (const price of building.prices) {
+                const res = game.resPool.get(price.name);
                 if (res.value >= price.val) continue; // we have enough
 
-                let craft = game.workshop.getCraft(price.name);
+                const craft = game.workshop.getCraft(price.name);
                 if (! craft) continue; // not craftable
 
                 let need = Math.ceil((price.val - res.value) / (1 + game.getEffect('craftRatio')));
-                for (let craftPrice of craft.prices) {
-                    let craftRes = game.resPool.get(craftPrice.name);
+                for (const craftPrice of craft.prices) {
+                    const craftRes = game.resPool.get(craftPrice.name);
                     need = Math.min(need, Math.floor(craftRes.value / craftPrice.val));
                 }
                 if (need > 0) game.craft(price.name, need);
@@ -1665,19 +1684,19 @@ SK.Scripts = class {
     }
 
     isCapped(buttons, target) {
-        for (var button of buttons) {
-            if (button.model.metadata?.name != 'chronosphere') continue;
+        for (const button of buttons) {
+            if (button.model.metadata?.name != target) continue;
             return button.model.resourceIsLimited == true;
         }
         return false; // if we can't find it, we haven't even begun to build it
     }
 
     coreCount(cost) {
-        var core = game.bld.buildingsData.find(b => b.name === 'aiCore');
-        var price = core.prices.find(p => p.name === 'antimatter').val;
-        var ratio = core.priceRatio + game.getEffect('priceRatio');
-        var totalCost = 0;
-        var count;
+        const core = game.bld.buildingsData.find((b) => b.name === 'aiCore');
+        let price = core.prices.find((p) => p.name === 'antimatter').val;
+        const ratio = core.priceRatio + game.getEffect('priceRatio');
+        let totalCost = 0;
+        let count;
         for (count=0; totalCost <= cost; count+=1) {
             totalCost += price;
             price *= ratio;
@@ -1687,7 +1706,7 @@ SK.Scripts = class {
 
     sellout() {
         // sac alicorns
-        var button = game.religionTab.sacrificeAlicornsBtn;
+        let button = game.religionTab.sacrificeAlicornsBtn;
         if (button) {
             button.controller._transform(button.model, Math.floor(button.controller._canAfford(button.model)));
         }
@@ -1696,20 +1715,24 @@ SK.Scripts = class {
         button = game.religionTab.adoreBtn;
         if (button) {
             button.controller.buyItem(button.model, {}, function(result) {
-                if (result) {button.update();}
+                if (result) {
+                    button.update();
+                }
             });
         }
 
         // sell a bunch of buildings, reset.
-        var sellAll = {'shiftKey':true};
-        var moonButton = null;
-        for (var button of game.bldTab.buttons.concat(game.spaceTab.planetPanels.reduce(function(base,pp){return base.concat(pp.children)}, []))) {
+        const sellAll = {'shiftKey': true};
+        let moonButton = null;
+        for (button of game.bldTab.buttons.concat(game.spaceTab.planetPanels.reduce(function(base, pp) {
+            return base.concat(pp.children);
+        }, []))) {
             if (! button.model.metadata) continue;
             if (button.model.metadata.name == 'chronosphere') continue; // never sell
             if (button.model.metadata.name == 'moonBase') moonButton = button;
             var sell = true;
-            for (var effect in button.model.metadata.effects) {
-                if (effect.substr(-3,3) == 'Max' || effect == 'maxKittens') {
+            for (const effect in button.model.metadata.effects) {
+                if (effect.substr(-3, 3) == 'Max' || effect == 'maxKittens') {
                     sell = false;
                     break;
                 }
@@ -1721,8 +1744,8 @@ SK.Scripts = class {
     }
 
     reset() {
-        let reset = this.model.minor.permitReset;
-        let script = this.model.option.script;
+        const reset = this.model.minor.permitReset;
+        const script = this.model.option.script;
 
         // reset settings to initial state, except for script metasettings
         // note that autoPlay will be off, this is the last time we'll get in.
@@ -1748,7 +1771,7 @@ SK.Scripts = class {
     /*** This is where scripts start ***/
 
     slowloop(action) {
-        switch(action) {
+        switch (action) {
             case 'init': // -> workshop-start, science-end, build-upgrade, trade-zebras, trade-hunt, policy
                 this.model.auto.explore = true;
                 this.model.auto.party = true;
@@ -1780,8 +1803,8 @@ SK.Scripts = class {
 
             case 'workshop-mid': // -> workshop-end
                 // this is just a reasonable sample:
-                var requiredWorkshop = [ "spaceManufacturing", "thoriumReactors", "tachyonAccelerators", "eludiumHuts"];
-                for (var upgrade of requiredWorkshop) {
+                var requiredWorkshop = ['spaceManufacturing', 'thoriumReactors', 'tachyonAccelerators', 'eludiumHuts'];
+                for (const upgrade of requiredWorkshop) {
                     if (! game.workshop.get(upgrade).researched) return false;
                 }
                 this.model.auto.workshop = false;
@@ -1799,7 +1822,7 @@ SK.Scripts = class {
                 return false;
 
             case 'science-end': // -|
-                var extraTechs = [ 'tachyonTheory', 'voidSpace', 'paradoxalKnowledge', 'antimatter' ];
+                var extraTechs = ['tachyonTheory', 'voidSpace', 'paradoxalKnowledge', 'antimatter'];
                 return this.singleTech(game.libraryTab.buttons, extraTechs);
 
             case 'build-upgrade': // -> build-start
@@ -1814,42 +1837,42 @@ SK.Scripts = class {
                 /** cath **/
                 var climit = {
                     'library': 200, // actually data center
-                    'observatory':1000,
-                    'warehouse':200,
-                    'harbor':200,
-                    'quarry':200,
-                    'oilWell':200,
-                    'calciner':200,
-                    'magneto':150,
-                    'steamworks':150,
-                    'ziggurat':100,
-                    'aiCore':this.coreCount(game.resPool.get('antimatter').value/100), // spend up to 1% of antimatter
+                    'observatory': 1000,
+                    'warehouse': 200,
+                    'harbor': 200,
+                    'quarry': 200,
+                    'oilWell': 200,
+                    'calciner': 200,
+                    'magneto': 150,
+                    'steamworks': 150,
+                    'ziggurat': 100,
+                    'aiCore': this.coreCount(game.resPool.get('antimatter').value/100), // spend up to 1% of antimatter
                 };
-                for (var bname in this.model.cathBuildings) {
-                    if (bname.slice(0,5) == 'zebra') continue;
+                for (const bname in this.model.cathBuildings) {
+                    if (bname.slice(0, 5) == 'zebra') continue;
                     this.model.cathBuildings[bname].enabled = true;
                 }
-                for (var bname in climit) this.model.cathBuildings[bname].limit = climit[bname];
+                for (const bname in climit) this.model.cathBuildings[bname].limit = climit[bname];
                 /** space **/
                 var space = [
                     'sattelite', 'moonOutpost', 'moonBase',
                     'planetCracker', 'hydrofracturer', 'spiceRefinery',
                     'sunforge', 'cryostation',
                 ];
-                for (var bname of space) this.model.spaceBuildings[bname].enabled = true;
-                var slimit = { 'sunforge':20, }
-                for (var bname in slimit) this.model.spaceBuildings[bname].limit = slimit[bname];
+                for (const bname of space) this.model.spaceBuildings[bname].enabled = true;
+                var slimit = {'sunforge': 20};
+                for (const bname in slimit) this.model.spaceBuildings[bname].limit = slimit[bname];
                 /** time **/
                 var tlimit = {
-                    'marker':false,
-                    'blackPyramid':false,
-                    'temporalBattery':30,
-                    'blastFurnace':37,
-                    'temporalImpedance':10,
-                    'ressourceRetrieval':20,
-                    'chronocontrol':1
+                    'marker': false,
+                    'blackPyramid': false,
+                    'temporalBattery': 30,
+                    'blastFurnace': 37,
+                    'temporalImpedance': 10,
+                    'ressourceRetrieval': 20,
+                    'chronocontrol': 1,
                 };
-                for (var bname in tlimit) {
+                for (const bname in tlimit) {
                     this.model.timeBuildings[bname].enabled = true;
                     this.model.timeBuildings[bname].limit = tlimit[bname];
                 }
@@ -1862,14 +1885,14 @@ SK.Scripts = class {
 
             case 'build-end': // -> time-end
                 if (game.calendar.year < game.calendar.darkFutureBeginning) {
-                    var resNames = ['wood', 'minerals', 'unobtainium'];
-                    for (var resName of resNames) {
-                        var res = game.resPool.get(resName);
+                    const resNames = ['wood', 'minerals', 'unobtainium'];
+                    for (const resName of resNames) {
+                        const res = game.resPool.get(resName);
                         if (res.value > res.maxValue) return false; // still overcapped
                     }
                 }
-                var lateSpace = {'spaceElevator':false, 'orbitalArray':50};
-                for (var bname in lateSpace) {
+                var lateSpace = {'spaceElevator': false, 'orbitalArray': 50};
+                for (const bname in lateSpace) {
                     this.model.spaceBuildings[bname].enabled = true;
                     this.model.spaceBuildings[bname].limit = lateSpace[bname];
                 }
@@ -1914,12 +1937,14 @@ SK.Scripts = class {
                 return false;
 
             case 'trade-zebras': // -> trade-on
-                var zebraPanel = game.diplomacyTab?.racePanels?.find(function(panel){return panel.race.name=='zebras'});
+                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name=='zebras');
                 if (!zebraPanel) return false;
                 var button = zebraPanel.embassyButton;
                 while (button.model.enabled) {
                     button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {button.update();}
+                        if (result) {
+                            button.update();
+                        }
                     });
                 }
                 this.model.auto.embassy = true;
@@ -1954,12 +1979,12 @@ SK.Scripts = class {
                 return false;
 
             case 'time-end': // |-> dark-future
-                var tlimits = ['ressourceRetrieval','blastFurnace'];
-                for (var tlimit of tlimits) {
+                var tlimits = ['ressourceRetrieval', 'blastFurnace'];
+                for (const tlimit of tlimits) {
                     // cap all limited time buildings
                     if (! this.model.timeBuildings[tlimit].limit) continue;
                     if (game.time.getCFU(tlimit).val < this.model.timeBuildings[tlimit].limit) {
-                        return false
+                        return false;
                     }
                 }
                 this.model.auto.cycle = true;
@@ -1970,8 +1995,8 @@ SK.Scripts = class {
 
             case 'dark-future': // |-> dark-future
                 if (game.calendar.year > game.calendar.darkFutureBeginning) {
-                    this.model.spaceBuildings['spaceStation'].enabled = true;
-                    this.model.spaceBuildings['spaceElevator'].enabled = false; // conserve UO for CS
+                    this.model.spaceBuildings.spaceStation.enabled = true;
+                    this.model.spaceBuildings.spaceElevator.enabled = false; // conserve UO for CS
                     this.model.auto.trade = false;
                     this.state.push('endgame');
                     return true;
@@ -1993,10 +2018,10 @@ SK.Scripts = class {
                 relicsRequired *= 1.1; // margin for error
                 var relics = game.resPool.get('relic').value;
                 if (relics < relicsRequired) {
-                    var button = game.religionTab.refineTCBtn;
-                    var mult = game.religionTab.refineTCBtn.controller.controllerOpts.gainMultiplier.call(button);
-                    var delta = Math.max(1, relicsRequired - relics);
-                    button.controller._transform(button.model, Math.ceil(delta / mult))
+                    const button = game.religionTab.refineTCBtn;
+                    const mult = game.religionTab.refineTCBtn.controller.controllerOpts.gainMultiplier.call(button);
+                    const delta = Math.max(1, relicsRequired - relics);
+                    button.controller._transform(button.model, Math.ceil(delta / mult));
                     return false; // run the check again next cycle
                 }
                 return this.doReset('init');
@@ -2007,7 +2032,7 @@ SK.Scripts = class {
     }
 
     fastloop(action) {
-        switch(action) {
+        switch (action) {
             case 'build-start':
                 this.slowloop(action);
                 this.model.spaceBuildings.spaceElevator.enabled = true;
@@ -2019,11 +2044,11 @@ SK.Scripts = class {
                 // elevator is already on, OA isn't helpful enough, and we shouldn't hit DF
                 // space station pulled from DF to here
                 var resNames = ['wood', 'minerals', 'unobtainium'];
-                for (var resName of resNames) {
-                    var res = game.resPool.get(resName);
+                for (const resName of resNames) {
+                    const res = game.resPool.get(resName);
                     if (res.value > res.maxValue) return false; // still overcapped
                 }
-                this.model.spaceBuildings['spaceStation'].enabled = true;
+                this.model.spaceBuildings.spaceStation.enabled = true;
                 this.model.auto.craft = true;
                 this.state.push('time-end');
                 return true;
@@ -2047,7 +2072,7 @@ SK.Scripts = class {
     fastParagon(action) {
         // Goal: 5 chronospheres, Flux Condenator, Eludium Huts
         // Estimate of ~1000 paragon per hour.
-        switch(action) {
+        switch (action) {
             case 'init': // -> build-start, build-upgrade, workshop-mid, trade-zebras, trade-hunt, policy
                 this.model.auto.explore = true;
                 this.model.auto.hunt = true;
@@ -2069,8 +2094,8 @@ SK.Scripts = class {
 
             case 'build-start': // -> religion, steamworks, pop-max-cath
                 /** cath **/
-                for (var bname in this.model.cathBuildings) {
-                    var limit = false;
+                for (const bname in this.model.cathBuildings) {
+                    let limit = false;
                     switch (bname) {
                         case 'oilWell': case 'quarry': case 'harbor': case 'amphitheatre': case 'calciner':
                             limit = 100;
@@ -2090,11 +2115,11 @@ SK.Scripts = class {
                 }
                 /** space **/
                 var slimit = {
-                    spaceElevator:5, sattelite:false, moonOutpost:false,
-                    hydrofracturer:10, spiceRefinery:10,
-                    researchVessel:40,
+                    spaceElevator: 5, sattelite: false, moonOutpost: false,
+                    hydrofracturer: 10, spiceRefinery: 10,
+                    researchVessel: 40,
                 };
-                for (var bname in slimit) {
+                for (const bname in slimit) {
                     this.model.spaceBuildings[bname].enabled = true;
                     this.model.spaceBuildings[bname].limit = slimit[bname];
                 }
@@ -2117,7 +2142,7 @@ SK.Scripts = class {
 
             case 'workshop-start': // -> workshop-mid
                 var requiredWorkshop = ['railgun', 'concreteHuts', 'caravanserai', 'orbitalGeodesy', 'seti', 'cadSystems', 'hubbleTelescope'];
-                for (var upgrade of requiredWorkshop) {
+                for (const upgrade of requiredWorkshop) {
                     if (! game.workshop.get(upgrade).researched) return false;
                 }
                 this.model.auto.workshop = false;
@@ -2133,9 +2158,9 @@ SK.Scripts = class {
                 return false;
 
             case 'workshop-end': // -|
-                var extraWorkshop = ['mWReactor', 'eludiumHuts', 'fluxCondensator'];
-                this.craftFor(game.workshop, extraWorkshop);
-                if (this.singleTech(game.workshopTab.buttons, extraWorkshop)) {
+                var finalWorkshop = ['mWReactor', 'eludiumHuts', 'fluxCondensator'];
+                this.craftFor(game.workshop, finalWorkshop);
+                if (this.singleTech(game.workshopTab.buttons, finalWorkshop)) {
                     return true;
                 }
                 return false;
@@ -2168,12 +2193,14 @@ SK.Scripts = class {
                 return this.singleTech(game.libraryTab.policyPanel.children, policies);
 
             case 'trade-zebras': // -|
-                var zebraPanel = game.diplomacyTab?.racePanels?.find(function(panel){return panel.race.name=='zebras'});
+                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name=='zebras');
                 if (!zebraPanel) return false;
                 var button = zebraPanel.embassyButton;
                 while (button.model.enabled) {
                     button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {button.update();}
+                        if (result) {
+                            button.update();
+                        }
                     });
                 }
                 this.model.auto.embassy = true;
@@ -2181,8 +2208,8 @@ SK.Scripts = class {
                 return true;
 
             case 'pop-max-cath': // -> pop-max-space
-                var kittens = game.resPool.get('kittens');
-                if (kittens.value == kittens.maxValue) {
+                var cathKittens = game.resPool.get('kittens');
+                if (cathKittens.value == cathKittens.maxValue) {
                     this.model.cathBuildings.magneto.enabled = false; // conserve alloy for stations
                     this.model.spaceBuildings.spaceStation.enabled = true;
                     this.model.auto.religion = false; // start accumulating faith
@@ -2193,16 +2220,16 @@ SK.Scripts = class {
                 return false;
 
             case 'pop-max-space': // -> endgame-stockpile
-                var kittens = game.resPool.get('kittens');
+                var spaceKittens = game.resPool.get('kittens');
                 // We want more than five space stations, but once we have a few,
                 // we will build them faster than we fill them. Just need to
                 // prime the pump
-                if (kittens.value >= kittens.maxValue
+                if (spaceKittens.value >= spaceKittens.maxValue
                     && game.bld.get('chronosphere').val >= 5
                     && game.space.getBuilding('spaceStation').val >= 5
                     && game.workshop.get('fluxCondensator').researched) {
                     // disable auto tech,
-                    for (var auto in this.model.auto) {
+                    for (const auto in this.model.auto) {
                         if (auto != 'play') this.model.auto[auto] = false;
                         game.time.isAccelerated = false;
                     }
@@ -2238,10 +2265,10 @@ SK.Scripts = class {
     }
 
     doReset(action) {
-        switch(action) {
+        switch (action) {
             case 'init': // |-> cooldown
                 // disable all automation except craft, and use up chronoheat
-                for (var auto in this.model.auto) this.model.auto[auto] = false;
+                for (const auto in this.model.auto) this.model.auto[auto] = false;
                 this.model.auto.craft = true;
                 this.model.auto.play = true;
                 game.time.isAccelerated = false;
@@ -2263,13 +2290,14 @@ SK.Scripts = class {
                 return true; // to cause refresh
         }
     }
-
-}
+};
 
 var sk;
 if (game && game.bld) {
     sk = new SK();
 } else { // we were loaded before the game was, wait for it.
-    dojo.subscribe('game/start', function(){ sk = new SK()});
+    dojo.subscribe('game/start', function() {
+        sk = new SK();
+    });
 }
 
