@@ -983,27 +983,37 @@ SK.Tasks = class {
             // We need a better way of finding out what a kitten produces in each job
             let res = null;
             let ticksToFull = null;
-            if (job.value === 0) continue; // can't calculate
+            if (! job.unlocked) continue;
+            if (job.value === 0) {
+                if (jobRatio[job.name]) limits[job.name] = 1; // can't calculate without at least one worker
+                continue;
+            }
             switch (job.name) {
                 case 'farmer':
                     // no limit.
                     break;
                 case 'woodcutter':
                     res = game.resPool.get('wood');
-                    ticksToFull = 3; // Limit production to what autoCraft can consume
+                    if (res.value >= res.maxValue * 1.1) limits[job.name] = 1; // bail if overcapped
+                    else ticksToFull = 3; // Limit production to what autoCraft can consume
                     break;
                 case 'miner':
                     res = game.resPool.get('minerals');
-                    ticksToFull = 3; // As Lumbercats
+                    if (res.value >= res.maxValue * 1.1) limits[job.name] = 1; // bail if overcapped
+                    else ticksToFull = 3; // As Lumbercats
                     break;
                 case 'geologist':
-                    var ironPerTick = game.resPool.get('iron').perTickCached;
-                    var coalPerTick = game.resPool.get('coal').perTickCached;
-                    limits[job.name] = Math.round((ironPerTick * (2 / 3) / coalPerTick) * job.value);
+                    var coalRes = game.resPool.get('coal');
+                    var ironRes = game.resPool.get('iron');
+                    if (coalRes.value >= coalRes.maxValue * 1.1 && ironRes.value >= ironRes.maxValue * 1.1) {
+                        limits[job.name] = 1; // bail if overcapped
+                    } else {
+                        limits[job.name] = Math.round((ironRes.perTickCached * (2 / 3) / coalRes.perTickCached) * job.value);
+                    }
                     break;
                 case 'hunter':
                     res = game.resPool.get('manpower');
-                    if (!sk.model.auto.hunt && res.value >= res.maxValue) limits[job.name] = 1;
+                    if (! sk.model.auto.hunt && res.value >= res.maxValue) limits[job.name] = 1;
                     else ticksToFull = 10;
                     break;
                 case 'scholar':
@@ -1041,6 +1051,7 @@ SK.Tasks = class {
         // find jobs with less than half target
         const needs = {};
         for (const job of game.village.jobs) {
+            if (! job.unlocked || ! jobRatio[job.name]) continue;
             let minimum = Math.floor(jobRatio[job.name] * kittens / 2);
             if (limits[job.name]) minimum = Math.min(minimum, limits[job.name]);
             if (job.value < minimum) needs[job.name] = minimum - job.value;
@@ -1055,35 +1066,36 @@ SK.Tasks = class {
         for (const need in needs) totalNeed += needs[need];
 
         // figure current distribution
-        let distribution = []; // [0:name, 1:count, 2:expected, 3:count/expected]
+        let distribution = [];
         for (const job of game.village.jobs) {
-            if (job.value === 0) continue;
-            distribution.push([job.name, job.value, kittens * jobRatio[job.name], job.value/kittens * jobRatio[job.name]]);
+            if (! job.unlocked || ! jobRatio[job.name]) continue;
+            distribution.push({
+                name: job.name,
+                count: job.value,
+                expected: kittens * jobRatio[job.name],
+                cpe: Math.max(job.value, 0.01)/(kittens * jobRatio[job.name]), // count per expected
+            });
         }
-        distribution.sort((a, b) => b[3] - a[3]);
 
         // allocate necessary losses to the most over-allocated
+        distribution.sort((a, b) => b.cpe - a.cpe);
         untilNeed: while (avails < totalNeed) {
             for (let i=0; i<distribution.length; i+=1) {
-                if (i+1 >= distribution.length || distribution[i][3] > distribution[i+1][3]) {
-                    distribution[i][1] -= 1;
-                    distribution[i][3] = distribution[i][1] / distribution[i][2];
+                if (i+1 >= distribution.length || distribution[i].cpe > distribution[i+1].cpe) {
+                    distribution[i].count -= 1;
+                    distribution[i].cpe = distribution[i].count / distribution[i].expected;
                     totalNeed -= 1;
                     continue untilNeed;
                 }
             }
-            console.log('UH OH!'); // TODO: this happens.
-            break; // this should not be possible, but infinite loops are really bad
+            console.log('smartAssign: warning: could not satisfy needs');
+            break; // should very rarely happen, but infinite loops are really bad
         }
         // lose them
         for (const job of game.village.jobs) {
-            for (let i=0; i<distribution.length; i+=1) {
-                if (job.name !== distribution[i][0]) continue;
-                const sack = job.value - distribution[i][1];
-                if (sack > 0) {
-                    game.village.sim.removeJob(job.name, sack);
-                    avails += sack;
-                }
+            const dist = distribution.find((d) => job.name === d.name);
+            if (dist && job.value > dist.count) {
+                game.village.sim.removeJob(job.name, job.value - dist.count);
             }
         }
 
@@ -1091,13 +1103,15 @@ SK.Tasks = class {
         for (const job of game.village.jobs) {
             const need = needs[job.name];
             if (need) {
-                game.village.assignJob(job, need);
-                avails -= need;
-                for (let i=0; i<distribution.length; i+=1) {
-                    if (job.name !== distribution[i][0]) continue;
-                    distribution[i][1] += need;
-                    distribution[i][3] = distribution[i][1] / distribution[i][2];
+                const assign = Math.min(need, avails);
+                game.village.assignJob(job, assign);
+                avails -= assign;
+                const dist = distribution.find((d) => job.name === d.name);
+                if (dist) {
+                    dist.count += assign;
+                    dist.cpe = dist.count / dist.expected;
                 }
+                // possible this is the first assign, that's ok, we don't need it in the dist then
             }
         }
 
@@ -1105,28 +1119,25 @@ SK.Tasks = class {
         delete distribution.farmer;
         distribution.reverse();
         distribution = distribution.filter(function(x) {
-            return x[0] !== 'farmer' && (!limits[x[0]] || x[1] < limits[x[0]]);
+            return x.name !== 'farmer' && (!limits[x.name] || x.count < limits[x.name]);
         });
         untilAvail: while (avails > 0) {
             for (let i=0; i<distribution.length; i+=1) {
-                if (i+1 >= distribution.length || distribution[i][3] < distribution[i+1][3]) {
-                    distribution[i][1] += 1;
+                if (i+1 >= distribution.length || distribution[i].cpe < distribution[i+1].cpe) {
+                    distribution[i].count += 1;
                     avails -= 1; // haven't done it yet, it's in "add them"
-                    distribution[i][3] = distribution[i][1] / distribution[i][2];
-                    if (distribution[i][1] >= limits[distribution[i][0]]) {
-                        distribution = distribution.filter((x) => !limits[x[0]] || x[1] < limits[x[0]]);
-                    }
+                    distribution[i].cpe = distribution[i].count / distribution[i].expected;
                     continue untilAvail;
                 }
             }
-            console.log('UH OH!');
-            break; // this should not be possible, but infinite loops are really bad
+            console.log(`smartAssign: warning: ${avails} unused kittens`); // happens mostly when distribution is totally empty.
+            break;
         }
         // add them
         for (const job of game.village.jobs) {
-            for (let i=0; i<distribution.length; i+=1) {
-                if (job.name !== distribution[i][0]) continue;
-                const hire = distribution[i][1] - job.value;
+            const dist = distribution.find((d) => job.name === d.name);
+            if (dist) {
+                const hire = dist.count - job.value;
                 if (hire) game.village.assignJob(job, hire);
             }
         }
