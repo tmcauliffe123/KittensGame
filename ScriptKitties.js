@@ -549,6 +549,12 @@ SK.Tasks = class {
                 }
             }
         }
+        const energyProdRatio = 1 + game.getEffect("energyProductionRatio");
+        const energyConsRatio = 1 + game.getLimitedDR(game.getEffect("energyConsumptionRatio"), 1) + game.getEffect("energyConsumptionIncrease");
+        total.summer *= energyProdRatio;
+        total.energyProduction *= energyProdRatio;
+        total.energyConsumption *= energyConsRatio;
+        total.winterSurplus = total.energyProduction - total.energyConsumption;
         console.log(total);
         return total;
     }
@@ -1298,6 +1304,7 @@ SK.Tasks = class {
         const cal = game.calendar;
         const ticksPassing = years * cal.seasonsPerYear * cal.daysPerSeason * cal.ticksPerDay;
         this.autoCraft(shatterTCGain * ticksPassing);
+        this.autoHunt(shatterTCGain * ticksPassing);
 
         // do shatter
         const btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
@@ -1321,6 +1328,7 @@ SK.Tasks = class {
                     // how many shatters worth of heat can we afford?
                     const factor = game.challenges.getChallenge('1000Years').researched ? 5 : 10;
                     shatter = Math.ceil((game.getEffect('heatMax') - game.time.heat) / factor);
+                    shatter = Math.max(shatter, 0);
                 }
 
                 // adjust to end in the right cycle
@@ -1471,17 +1479,8 @@ SK.Tasks = class {
                     }
                 }
                 if (otherCosts) {
-                    const unicorns = game.resPool.get('unicorns').value;
-                    const tears = game.resPool.get('tears').value;
-                    const zigs = game.bld.get('ziggurat').on;
-                    const available = tears + Math.floor(unicorns / 2500) * zigs;
-                    if (available > tearCost) {
-                        if (tears < tearCost) {
-                            const sacButton = game.religionTab.sacrificeBtn;
-                            // XXX: I don't like calling an internal function like _transform
-                            // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
-                            sacButton.controller._transform(sacButton.model, Math.ceil((tearCost - tears) / zigs));
-                        }
+                    const sufficient = this.sacForTears(tearCost);
+                    if (sufficient) {
                         if ( ! bestButton.model.enabled) bestButton.update();
                         bestButton.controller.buyItem(bestButton.model, {}, function(result) {
                             if (result) {
@@ -1491,8 +1490,35 @@ SK.Tasks = class {
                     }
                 }
             }
+
+            // extension. If we're building markers, try to get enough tears for them.
+            if (this.model.timeBuildings.marker.enabled) {
+                let marker = game.religionTab.zgUpgradeButtons.find((z)=>z.id === 'marker');
+                if (marker) {
+                    let price = marker.model.prices.find((p)=>p.name === 'tears');
+                    if (price) this.sacForTears(price.val);
+                }
+            }
         }
         return acted;
+    }
+
+    sacForTears(tearCost) {
+        const unicorns = game.resPool.get('unicorns').value;
+        const tears = game.resPool.get('tears').value;
+        const zigs = game.bld.get('ziggurat').on;
+        const available = tears + Math.floor(unicorns / 2500) * zigs;
+        if (available >= tearCost) {
+            if (tears < tearCost) {
+                const sacButton = game.religionTab.sacrificeBtn;
+                // XXX: I don't like calling an internal function like _transform
+                // But it's the only way to request a specific number of Unicorn sacrifices, instead of spam-clicking...
+                sacButton.controller._transform(sacButton.model, Math.ceil((tearCost - tears) / zigs));
+            }
+            return true;
+        } else {
+            return false;
+        }
     }
 
     // Auto buys and sells bcoins optimally
