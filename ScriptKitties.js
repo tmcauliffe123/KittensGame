@@ -412,7 +412,7 @@ SK.Gui = class {
     }
 
     refresh() {
-        for (const auto in this.model.auto) {
+        for (const auto in this.switches) {
             const element = this.switches[auto];
             $('#'+element).toggleClass('disabled', !this.model.auto[auto]);
         }
@@ -1615,7 +1615,7 @@ SK.Scripts = class {
             {name:'fastParagon', title:'Fast Reset'},
             {name:'slowloop',    title:'DF ChronoExpo'},
             {name:'fastloop',    title:'Short ChronoExpo'},
-            {name:'hoglagame',   title:'Hoglagame'},
+            {name:'hoglaHunt',   title:'Hoglagame - Hunt'},
             {name:'doReset',     title:'Reset Now'},
         ];
     }
@@ -1733,17 +1733,39 @@ SK.Scripts = class {
         return false; // if we can't find it, we haven't even begun to build it
     }
 
-    coreCount(cost) {
-        const core = game.bld.buildingsData.find((b) => b.name === 'aiCore');
-        let price = core.prices.find((p) => p.name === 'antimatter').val;
-        const ratio = core.priceRatio + game.getEffect('priceRatio');
-        let totalCost = 0;
-        let count;
-        for (count=0; totalCost <= cost; count+=1) {
-            totalCost += price;
-            price *= ratio;
+    buildingCount(building, resource, fraction) {
+        const data = game.bld.buildingsData.find((b) => b.name === building);
+        if (! data) {
+            console.error(`buildingCount: ${building} does not exist!`);
+            return 0;
         }
-        return count - 1;
+        const ratio = game.bld.getPriceRatio(building);
+
+        let costs = [];
+        for (let price of data.prices) {
+            if (resource === 'all' || resource === price.name) {
+                costs.push({
+                    total: 0,
+                    next: price.val,
+                    limit: fraction * game.resPool.get(price.name).value
+                });
+            }
+        }
+
+        if (costs.length <= 0) {
+            console.error(`buildingCount: ${building} does not use ${resource}`);
+            return 0;
+        }
+
+        let count = 0;
+        while (true) {
+            for (let cost of costs) {
+                cost.total += cost.next;
+                cost.next *= ratio;
+                if (cost.total > cost.limit) return count;
+            }
+            count += 1;
+        }
     }
 
     sellout() {
@@ -1782,7 +1804,7 @@ SK.Scripts = class {
             if (sell == true) button.controller.sell(sellAll, button.model);
         }
         // and sell Moon Bases, because it's worth it for the UO boost
-        if (sell == true) moonButton.controller.sell(sellAll, moonButton.model);
+        if (sell == true && moonButton) moonButton.controller.sell(sellAll, moonButton.model);
     }
 
     reset() {
@@ -1793,6 +1815,7 @@ SK.Scripts = class {
         // note that autoPlay will be off, this is the last time we'll get in.
         this.model.wipe();
         this.model.setDefaults();
+        this.init();
         if (script !== 'doReset') {
             this.model.option.script = script;
             this.model.minor.permitReset = reset;
@@ -1802,10 +1825,10 @@ SK.Scripts = class {
             sk.tasks.halt();
             this.sellout();
             this.model.auto.play = true;
-            this.init();
             sk.saveOptions();
             game.reset();
         } else {
+            sk.gui.refresh();
             game.msg('AutoPlay Reset not permitted. Script Terminating.');
         }
     }
@@ -1888,7 +1911,7 @@ SK.Scripts = class {
                     'magneto': 150,
                     'steamworks': 150,
                     'ziggurat': 100,
-                    'aiCore': this.coreCount(game.resPool.get('antimatter').value/100), // spend up to 1% of antimatter
+                    'aiCore': this.buildingCount('aiCore', 'antimatter', 0.01), // spend up to 1% of antimatter
                 };
                 for (const bname in this.model.cathBuildings) {
                     if (bname.slice(0, 5) == 'zebra') continue;
@@ -2101,7 +2124,7 @@ SK.Scripts = class {
                 return true;
 
             case 'trade-on':
-                this.model.minor.noElderTrade = true; // XXX TODO HACK!!!
+                this.model.minor.elderTrade = false;
                 this.model.auto.trade = true;
                 return true;
 
@@ -2296,14 +2319,149 @@ SK.Scripts = class {
                 game.msg(`CRITICAL: unrecognized state ${action}`);
                 return true; // to cause refresh
         }
-
-        /*
-        https://www.reddit.com/r/kittensgame/comments/hu8n43/late_game_short_runs_for_maximum_paragon_grinding/
-        */
     }
 
-    hoglagame(action) {
-        return true; // TODO
+    hoglaHunt(action) {
+        var resourceFraction = 0.001;
+        var unobtainiumFraction = 0.10;
+        var maxFields = 100;
+        var maxChronospheres = 78;
+
+        /* Plan:
+         *   1. run science/workshop up to standards
+         *   2. build housing and craft ratio
+         *   3. when upgrades are in, start hunting
+         *   4. craft BPs and build CSes
+         * Notes:
+         *   We carry over a little over 10k parchment, 5k for Drama, 5k for the festival, 250 for the Chapel, no slack.
+         */
+        switch (action) {
+            case 'init': // -> build-start, solar-start, hunt-start
+                this.model.auto.assign = true;
+                this.model.auto.craft = true;
+                this.model.auto.party = true;
+                this.model.auto.research = true;
+                this.model.auto.workshop = true;
+                this.model.minor.conserveExotic = true;
+                this.model.minor.partyLimit = 1;
+                this.model.option.assign = 'hunter';
+                this.model.option.book = 'default';
+                this.model.option.minSecResRatio = 0.01;
+                this.state.push('build-start');
+                this.state.push('solar-start');
+                this.state.push('hunt-start');
+                game.ui.activeTabId = 'Bonfire';
+                game.render();
+                return true;
+
+            case 'build-start': // -> build-end
+                var buildings = [ 'field', 'logHouse', 'mansion', 'factory', 'workshop', 'zebraOutpost' ];
+                for (const bname of buildings) {
+                    let limit = this.buildingCount(bname, 'all', resourceFraction);
+                    if (limit) { // important because limit == 0 means unlimited
+                        this.model.cathBuildings[bname].enabled = true;
+                        this.model.cathBuildings[bname].limit = limit;
+                    }
+                }
+                if (this.model.cathBuildings['field'].limit > maxFields) {
+                    this.model.cathBuildings['field'].limit = maxFields;
+                }
+                this.model.auto.build = true;
+                this.state.push('build-end');
+                return true;
+
+            case 'build-end': // -|
+                var requiredWorkshop = ['ironwood', 'concreteHuts', 'unobtainiumHuts', 'eludiumHuts'];
+                for (const upgrade of requiredWorkshop) {
+                    if (! game.workshop.get(upgrade).researched) return false;
+                }
+                this.model.cathBuildings['hut'].enabled = true;
+                this.model.cathBuildings['hut'].limit = this.buildingCount('hut', 'all', resourceFraction);
+                return true;
+
+            case 'solar-start': // -> solar-end, craft-start
+                if (this.singleBuild(game.bldTab.buttons, 'chapel')) {
+                    this.state.push('solar-end');
+                    this.state.push('craft-start');
+                    return true;
+                }
+                return false;
+
+            case 'solar-end': // -|
+                if (this.singleTech(game.religionTab.rUpgradeButtons, ['solarRevolution'])) {
+                    return true;
+                }
+                return false;
+
+            case 'craft-start': // -|
+                if (game.calendar.festivalDays > 0
+                        && this.model.cathBuildings['hut'].enabled
+                        && this.model.auto.hunt) {
+                    this.model.option.book = 'blueprint';
+                    return true;
+                }
+                return false;
+
+            case 'hunt-start': // -> hunt-end
+                if (game.getEffect('hunterRatio') > 4) { // max is 4.5, but 4 is enough to get started.
+                    this.model.auto.hunt = true;
+                    this.model.cathBuildings['chronosphere'].enabled = true;
+                    this.model.cathBuildings['chronosphere'].limit = Math.min(maxChronospheres,
+                        this.buildingCount('chronosphere', 'unobtainium', unobtainiumFraction));
+                    this.state.push('hunt-end');
+                    return true;
+                }
+                return false;
+
+            case 'hunt-end': // -> paper-blueprint
+                if (game.bld.get('chronosphere').val >= this.model.cathBuildings['chronosphere'].limit
+                        && game.workshop.get('fluxCondensator').researched) {
+                    this.model.auto.build = false;
+                    this.state.push('paper-blueprint');
+                    return true;
+                }
+                return false;
+
+            case 'paper-blueprint': // -> paper-compedium
+                if (game.resPool.get('blueprint').value < 10000) return false; // 10k is near the asymptote for carried-over crafted resources
+                this.model.option.book = 'compedium';
+                this.state.push('paper-compedium');
+                return true;
+
+            case 'paper-compedium': // -> paper-manuscript
+                if (game.resPool.get('compedium').value < 10000) return false;
+                this.model.option.book = 'manuscript';
+                this.state.push('paper-manuscript');
+                return true;
+
+            case 'paper-manuscript': // -> paper-parchment
+                if (game.resPool.get('manuscript').value < 10000) return false;
+                this.model.option.book = 'parchment';
+                this.state.push('paper-parchment');
+                return true;
+
+            case 'paper-parchment': // -> endgame-reset!
+                if (game.resPool.get('parchment').value < 10000) return false;
+                this.model.option.book = 'default';
+                this.model.auto.craft = false;
+                this.model.auto.hunt = false;
+                this.state.push('endgame-stockpile');
+                return true;
+
+            case 'endgame-stockpile': // -> endgame-reset!
+                var manpower = game.resPool.get('manpower');
+                if (manpower.value >= manpower.maxValue) {
+                    this.reset();
+                    return true;
+                }
+                return false;
+
+            default:
+                this.model.auto.play = false;
+                console.log(`CRITICAL: unrecognized state ${action}`);
+                game.msg(`CRITICAL: unrecognized state ${action}`);
+                return true; // to cause refresh
+        }
     }
 
     doReset(action) {
