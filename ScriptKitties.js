@@ -92,6 +92,7 @@ SK.Model = class {
             praiseAfter: 'Praise After Religion',
             unicornIvory: 'Unicorn Ivory Optimization',
             conserveExotic: 'Conserve Exotic Resources',
+            elderTrade: 'Auto Trade with the Elders',
             permitReset: 'Permit AutoPlay to Reset',
         };
 
@@ -127,6 +128,8 @@ SK.Model = class {
         this.minor = {
             observe: true,
             conserveExotic: true,
+            partyLimit: 10,
+            elderTrade: true,
         };
     }
 
@@ -886,8 +889,8 @@ SK.Tasks = class {
             const culture = game.resPool.get('culture').value;
             const parchment = game.resPool.get('parchment').value;
 
-            if (catpower > 1500 && culture > 5000 && parchment > 2500) {
-                if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays < 400*10) {
+            if (catpower >= 1500 && culture >= 5000 && parchment >= 2500) {
+                if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays <= 400*(this.model.minor.partyLimit - 1)) {
                     game.village.holdFestival(1);
                 } else if (game.calendar.festivalDays == 0) {
                     game.village.holdFestival(1);
@@ -1209,6 +1212,8 @@ SK.Tasks = class {
             bestButton.controller.buyItem(bestButton.model, {}, function(result) {
                 if (result) {
                     acted = true; bestButton.update();
+                } else {
+                    console.log(`Failed to build ${bestButton.model.metadata.name}`);
                 }
             });
         }
@@ -1264,7 +1269,7 @@ SK.Tasks = class {
                 const tiRes = game.resPool.get('titanium');
                 const unoRes = game.resPool.get('unobtainium');
 
-                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && ! this.model.minor.noElderTrade) {
+                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && this.model.minor.elderTrade) {
                     game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
                     traded = true;
                 } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
