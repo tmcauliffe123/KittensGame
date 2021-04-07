@@ -640,7 +640,7 @@ SK.Tasks = class {
             $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger('click');
         }
         if (this.model.auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
-            if (game.bldTab.buttons[1].model.enabled) {
+            if (game.bldTab.children[1].model.enabled) {
                 $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger('click');
             }
         }
@@ -659,7 +659,7 @@ SK.Tasks = class {
         let built = false;
         if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
             const cb = this.model.cathBuildings;
-            for (var button of game.bldTab.buttons) {
+            for (var button of game.bldTab.children) {
                 if (! button.model.metadata) continue;
                 const name = button.model.metadata.name;
                 if (button.model.enabled && cb[name].enabled
@@ -762,7 +762,7 @@ SK.Tasks = class {
             }
         }
         if (this.model.minor.observe) {
-            const checkObserveBtn = document.getElementById('observeBtn');
+            const checkObserveBtn = game.calendar.observeBtn;
             if (checkObserveBtn) checkObserveBtn.click();
         }
         if (this.model.minor.promote) {
