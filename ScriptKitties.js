@@ -99,7 +99,7 @@ SK.Model = class {
             unicornIvory: 'Unicorn Ivory Optimization',
             conserveExotic: 'Conserve Exotic Resources',
             elderTrade: 'Auto Trade with the Elders',
-            permitReset: 'Permit AutoPlay to Reset',
+            permitReset: 'Permit Auto Play to Reset',
         };
 
         // These will allow quick selection of the buildings which consume energy
@@ -1577,6 +1577,7 @@ SK.Tasks = class {
         const button = game.timeTab.vsPanel.children[0].children[0];
         if (button.model) {
             const amount = all ? {'shiftKey': true} : {};
+            if (! button.model.enabled) button.controller.updateEnabled(button.model);
             button.controller.buyItem(button.model, amount, function(result) {
                 if (result) button.update();
             });
@@ -1585,7 +1586,7 @@ SK.Tasks = class {
 
     autoPlay(ticksPerCycle) {
         if (this.model.auto.play) {
-            this.scripts.run(this.model.option.script);
+            return this.scripts.run(this.model.option.script);
         }
     }
 
@@ -1651,6 +1652,8 @@ SK.Scripts = class {
         if (action != 'init') { // init is allowed to change tab
             game.ui.confirm = oldConfirm;
         }
+
+        return this.turbo;
     }
 
     alwaysYes(title, msg, fn) {
@@ -1854,7 +1857,7 @@ SK.Scripts = class {
         const script = this.model.option.script;
 
         // reset settings to initial state, except for script metasettings
-        // note that autoPlay will be off, this is the last time we'll get in.
+        // note that auto.play will be off, this is the last time we'll get in.
         this.model.wipe();
         this.model.setDefaults();
         this.init();
@@ -1871,11 +1874,24 @@ SK.Scripts = class {
             game.reset();
         } else {
             sk.gui.refresh();
-            game.msg('AutoPlay Reset not permitted. Script Terminating.');
+            game.msg('Auto Play Reset not permitted. Script Terminating.');
         }
     }
 
     /*** This is where scripts start ***/
+
+    none(action) {
+        game.msg("Don't do that");
+        game.msg('You have enabled Auto Play without reading the docs', 'alert');
+        this.model.auto.play = false;
+        return true;
+    }
+
+    test(action) {
+        game.msg('You have failed the test.','important');
+        this.model.auto.play = false;
+        return true;
+    }
 
     slowloop(action) {
         switch (action) {
@@ -2783,6 +2799,7 @@ SK.Scripts = class {
             case 'fix-start': // -> fix-loop
                 if (this.massBuild(sk.bldTabChildren(), 'chronosphere', maxCryo)
                     && this.singleBuild(game.timeTab.vsPanel.children[0].children, 'cryochambers')) {
+                    this.turbo = true;
                     this.state.push('fix-loop');
                     return true;
                 }
@@ -2794,6 +2811,7 @@ SK.Scripts = class {
                 const btn = game.timeTab.cfPanel.children[0].children[0];
                 btn.controller.doShatterAmt(btn.model, 500);
                 if (game.time.getVSU('usedCryochambers').on === 0) {
+                    this.turbo = false;
                     this.state.push('pop-max');
                     return true;
                 }
