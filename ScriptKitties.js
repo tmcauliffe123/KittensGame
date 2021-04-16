@@ -1566,17 +1566,18 @@ SK.Tasks = class {
             }
             this.model.managedFugit = game.time.isAccelerated;
         } else if (this.model.managedFugit) {
-            // if it was turned off while Fugit was on, turn off Fugit
+            // if auto was turned off while Fugit was on, turn off Fugit
             game.time.isAccelerated = false;
             this.model.managedFugit = false;
         }
         return false;
     }
 
-    fixCryochamber() {
+    fixCryochamber(all = false) {
         const button = game.timeTab.vsPanel.children[0].children[0];
         if (button.model) {
-            button.controller.buyItem(button.model, {}, function(result) {
+            const amount = all ? {'shiftKey': true} : {};
+            button.controller.buyItem(button.model, amount, function(result) {
                 if (result) button.update();
             });
         }
@@ -1622,6 +1623,9 @@ SK.Scripts = class {
             {name:'slowloop',    title:'DF ChronoExpo'},
             {name:'fastloop',    title:'Short ChronoExpo'},
             {name:'hoglaHunt',   title:'Hoglagame - Hunt'},
+            {name:'hoglaMint',   title:'Hoglagame - Mint'},
+            {name:'hoglaTrade',  title:'Hoglagame - Trade'},
+            {name:'cryEngine',   title:'CryEngine'},
             {name:'doReset',     title:'Reset Now'},
         ];
     }
@@ -1656,19 +1660,22 @@ SK.Scripts = class {
     /*** These are utility functions to simplify scripts below ***/
 
     singleBuild(buttons, building) {
-        let built = false;
+        return this.massBuild(buttons, building, 1);
+    }
+
+    massBuild(buttons, building, count) {
         for (var button of buttons) {
             if (button.model.metadata?.name != building) continue;
-            if (button.model.on > 0) return true; // we've already got one
+            let remaining = count - button.model.on;
+            if (remaining <= 0) return true; // we've already got enough
+            if (! button.model.enabled) button.controller.updateEnabled(button.model);
             if (button.model.enabled) {
-                button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {
-                        built = true; button.update();
-                    }
-                });
+                button.controller.build(button.model, remaining);
+                button.update();
+                return button.model.on >= count;
             }
         }
-        return built;
+        return false;
     }
 
     singleTech(buttons, targets) {
@@ -1686,6 +1693,11 @@ SK.Scripts = class {
                     button.controller.buyItem(button.model, {}, function(result) {
                         if (result) button.update();
                     });
+                }
+                if (metadata.researched || metadata.on) {
+                    count += 1;
+                    continue;
+                } else {
                     return false;
                 }
             }
@@ -1695,7 +1707,7 @@ SK.Scripts = class {
 
     singleUpgrade(buildings) {
         let count = 0;
-        for (const button of game.bldTab.buttons) {
+        for (const button of sk.bldTabChildren()) {
             if (! button.controller.upgrade) continue; // easy filter for upgradable buildings
             const metadata = button.model.metadata;
             if (buildings.includes(metadata.name)) {
@@ -1764,7 +1776,7 @@ SK.Scripts = class {
         }
 
         let count = 0;
-        while (true) {
+        while (count <= 10000) { // never infinite loops
             for (let cost of costs) {
                 cost.total += cost.next;
                 cost.next *= ratio;
@@ -1772,6 +1784,30 @@ SK.Scripts = class {
             }
             count += 1;
         }
+        return count; // if value >= 10k
+    }
+
+    templarCount(fraction) {
+        sk.tasks.ensureContentExists('Religion');
+        let button = game.religionTab.rUpgradeButtons.find((b)=> b.model.metadata.name === 'templars');
+        let costs = [];
+        for (let price of button.model.metadata.prices) {
+            costs.push({
+                total: 0,
+                next: price.val,
+                limit: fraction * game.resPool.get(price.name).value
+            });
+        }
+        let count = 0;
+        while (count < 250) { // never infinite loops
+            for (let cost of costs) {
+                cost.total += cost.next;
+                cost.next *= button.model.metadata.priceRatio;
+                if (cost.total > cost.limit) return count;
+            }
+            count += 1;
+        }
+        return 0;
     }
 
     sellout() {
@@ -1794,10 +1830,10 @@ SK.Scripts = class {
         // sell a bunch of buildings, reset.
         const sellAll = {'shiftKey': true};
         let moonButton = null;
-        for (button of game.bldTab.buttons.concat(game.spaceTab.planetPanels.reduce(function(base, pp) {
+        for (button of sk.bldTabChildren().concat(game.spaceTab.planetPanels?.reduce(function(base, pp) {
             return base.concat(pp.children);
         }, []))) {
-            if (! button.model.metadata) continue;
+            if (! button?.model?.metadata) continue;
             if (button.model.metadata.name == 'chronosphere') continue; // never sell
             if (button.model.metadata.name == 'moonBase') moonButton = button;
             var sell = true;
@@ -1865,7 +1901,7 @@ SK.Scripts = class {
                 return true;
 
             case 'workshop-start': // -> workshop-mid
-                if (this.singleBuild(game.bldTab.buttons, 'workshop')) {
+                if (this.singleBuild(sk.bldTabChildren(), 'workshop')) {
                     this.model.auto.workshop = true;
                     this.state.push('workshop-mid');
                     return true;
@@ -2034,7 +2070,7 @@ SK.Scripts = class {
             case 'trade-on': // -> trade-off
                 if (game.calendar.year > game.calendar.darkFutureBeginning) {
                     return true; // stop in DF.
-                } else if (this.isCapped(game.bldTab.buttons, 'chronosphere')) {
+                } else if (this.isCapped(sk.bldTabChildren(), 'chronosphere')) {
                     this.model.auto.trade = true;
                     this.state.push('trade-off');
                     return true;
@@ -2042,7 +2078,7 @@ SK.Scripts = class {
                 return false;
 
             case 'trade-off': // -> trade-on
-                if (! this.isCapped(game.bldTab.buttons, 'chronosphere')) {
+                if (! this.isCapped(sk.bldTabChildren(), 'chronosphere')) {
                     this.model.auto.trade = false;
                     this.state.push('trade-on');
                     return true;
@@ -2076,7 +2112,7 @@ SK.Scripts = class {
 
             case 'endgame': // |-> cooldown
                 if (game.calendar.cycle == 3) return false; // Helios cycle lowers UO cap
-                if (! this.isCapped(game.bldTab.buttons, 'chronosphere')) return false;
+                if (! this.isCapped(sk.bldTabChildren(), 'chronosphere')) return false;
                 this.model.auto.bcoin = false;
                 this.state.push('ensure-relics');
                 return true;
@@ -2386,7 +2422,7 @@ SK.Scripts = class {
                 return true;
 
             case 'solar-start': // -> solar-end, craft-start
-                if (this.singleBuild(game.bldTab.buttons, 'chapel')) {
+                if (this.singleBuild(sk.bldTabChildren(), 'chapel')) {
                     this.state.push('solar-end');
                     this.state.push('craft-start');
                     return true;
@@ -2457,6 +2493,315 @@ SK.Scripts = class {
             case 'endgame-stockpile': // -> endgame-reset!
                 var manpower = game.resPool.get('manpower');
                 if (manpower.value >= manpower.maxValue) {
+                    this.reset();
+                    return true;
+                }
+                return false;
+
+            default:
+                this.model.auto.play = false;
+                console.log(`CRITICAL: unrecognized state ${action}`);
+                game.msg(`CRITICAL: unrecognized state ${action}`);
+                return true; // to cause refresh
+        }
+    }
+
+    hoglaMint(action) {
+        var resourceFraction = 0.001;
+        var unobtainiumFraction = 0.10;
+        var maxFields = 100;
+        var maxTemples = 150; // judgement call, when to switch from manuscripts to blueprints
+        var maxChronospheres = 80;
+
+        /* Plan:
+         *   Build lots of Mints
+         *   Build lots of Workshops
+         *   Build lots of Temples and Templars
+         *   Compress Furs -> Blueprints
+         *   Make Chronospheres.
+         */
+        switch (action) {
+            case 'init': // -> build-start, solar-end, hunt-start
+                this.model.auto.assign = true;
+                this.model.auto.craft = true;
+                this.model.auto.research = true;
+                this.model.auto.workshop = true;
+                this.model.minor.conserveExotic = true;
+                this.model.option.book = 'default';
+                this.model.option.minSecResRatio = 0.01;
+                this.state.push('build-start');
+                this.state.push('templar-start');
+                this.state.push('mint-start');
+                game.ui.activeTabId = 'Bonfire';
+                game.render();
+                return true;
+
+            case 'build-start': // -> build-end
+                var buildings = [ 'field', 'logHouse', 'mansion', 'factory', 'workshop', ];
+                for (const bname of buildings) {
+                    let limit = this.buildingCount(bname, 'all', resourceFraction);
+                    if (limit) { // important because limit == 0 means unlimited
+                        this.model.cathBuildings[bname].enabled = true;
+                        this.model.cathBuildings[bname].limit = limit;
+                    }
+                }
+                if (this.model.cathBuildings.field.limit > maxFields) {
+                    this.model.cathBuildings.field.limit = maxFields;
+                }
+                this.model.cathBuildings.temple.enabled = true;
+                this.model.cathBuildings.temple.limit = this.buildingCount('temple', 'gold', resourceFraction);
+                this.model.cathBuildings.mint.enabled = true;
+                this.model.cathBuildings.mint.limit = this.buildingCount('mint', 'minerals', resourceFraction);
+                this.model.auto.build = true;
+                this.state.push('build-end');
+                return true;
+
+            case 'build-end': // -|
+                var requiredWorkshop = ['ironwood', 'concreteHuts', 'unobtainiumHuts', 'eludiumHuts'];
+                for (const upgrade of requiredWorkshop) {
+                    if (! game.workshop.get(upgrade).researched) return false;
+                }
+                this.model.cathBuildings.hut.enabled = true;
+                this.model.cathBuildings.hut.limit = this.buildingCount('hut', 'all', resourceFraction);
+                this.model.option.book = 'manuscript'; // start temples in earnest
+                return true;
+
+            case 'templar-start': // -|
+                if (this.singleTech(game.religionTab.rUpgradeButtons, ['transcendence'])) {
+                    this.state.push('templar-end');
+                    return true;
+                }
+                return false;
+
+            case 'templar-end': // -|
+                let tc = this.templarCount(resourceFraction);
+                if (this.massBuild(game.religionTab.rUpgradeButtons, 'templars', tc)) {
+                    return true;
+                }
+                return false;
+
+            case 'mint-start': // -> hunt-end
+                if (game.bld.get('temple').val >= maxTemples) {
+                    this.model.option.book = 'blueprint';
+                    this.model.cathBuildings.chronosphere.enabled = true;
+                    this.model.cathBuildings.chronosphere.limit = Math.min(maxChronospheres,
+                        this.buildingCount('chronosphere', 'unobtainium', unobtainiumFraction));
+                    this.state.push('mint-end');
+                    return true;
+                }
+                return false;
+
+            case 'mint-end': // -> paper-blueprint
+                if (game.bld.get('chronosphere').val >= this.model.cathBuildings['chronosphere'].limit
+                        && game.workshop.get('fluxCondensator').researched) {
+                    this.model.auto.build = false;
+                    this.state.push('paper-blueprint');
+                    return true;
+                }
+                return false;
+
+            case 'paper-blueprint': // -> paper-compedium
+                if (game.resPool.get('blueprint').value < 10000) return false; // 10k is near the asymptote for carried-over crafted resources
+                this.model.option.book = 'compedium';
+                this.state.push('paper-compedium');
+                return true;
+
+            case 'paper-compedium': // -> paper-manuscript
+                if (game.resPool.get('compedium').value < 10000) return false;
+                this.model.option.book = 'manuscript';
+                this.state.push('paper-manuscript');
+                return true;
+
+            case 'paper-manuscript': // -> paper-parchment
+                if (game.resPool.get('manuscript').value < 10000) return false;
+                this.model.option.book = 'parchment';
+                this.state.push('paper-parchment');
+                return true;
+
+            case 'paper-parchment': // -> endgame-reset!
+                if (game.resPool.get('parchment').value < 10000) return false;
+                this.model.option.book = 'default';
+                this.model.auto.craft = false;
+                this.model.auto.hunt = false;
+                this.state.push('endgame-stockpile');
+                return true;
+
+            case 'endgame-stockpile': // -> endgame-reset!
+                var manpower = game.resPool.get('manpower');
+                if (manpower.value >= manpower.maxValue) {
+                    this.reset();
+                    return true;
+                }
+                return false;
+
+            default:
+                this.model.auto.play = false;
+                console.log(`CRITICAL: unrecognized state ${action}`);
+                game.msg(`CRITICAL: unrecognized state ${action}`);
+                return true; // to cause refresh
+        }
+    }
+
+    hoglaTrade(action) {
+        /* Plan:
+         *   explore for trading partners
+         *   workshop -> flux condensator
+         *   trade 10%
+         *   mass build chronos
+         *
+         *   We require a minimum of 88 chronospheres, because:
+         *      * trading uses 20% of our resources
+         *      * resetting with 88 CS gives 0.80 * 1.32 == 1.056
+         *      * or 5.6% net gains. That's enough to be worth doing
+         *      * (and 88 is a cool number for a time loop)
+         */
+
+        // Phase 0. Variables
+        const chronoCount = Math.min(
+            this.buildingCount('chronosphere', 'unobtainium', 0.001),
+            this.buildingCount('chronosphere', 'science', 0.001),
+            this.buildingCount('chronosphere', 'timeCrystal', 0.000001)
+        );
+        sk.tasks.ensureContentExists('Trade'); // create button
+        const lizards = game.diplomacy.get('lizards');
+
+        const chronoPossible = this.buildingCount('chronosphere', 'blueprint', 1.0);
+        if (chronoPossible < chronoCount) {
+            // Phase 1. Explore
+            if (! lizards.unlocked) {
+                const button = game.diplomacyTab.exploreBtn;
+                if (button) {
+                    for (let i=0; i<5; i++) {
+                        button.controller.buyItem(button.model, {}, function(result) {
+                            if (result) game.diplomacyTab.render($('div.tabInner.Trade')[0]);
+                        });
+                    }
+                } else {
+                    console.log('Could not find explore button.');
+                    return false;
+                }
+            }
+
+            // Phase 2. Trade
+            if (lizards.unlocked) {
+                const tradeFifth = Math.floor(game.diplomacy.getMaxTradeAmt(lizards) / 5);
+                game.diplomacy.tradeMultiple(lizards, tradeFifth);
+            } else {
+                console.log('Lizards are not our friends');
+                return false;
+            }
+        }
+
+        // Phase 3. Build and reset
+        console.log(chronoCount);
+        if (this.massBuild(sk.bldTabChildren(), 'chronosphere', chronoCount)
+            || this.massBuild(sk.bldTabChildren(), 'chronosphere', 88)) {
+            console.log('Pass test 1.');
+            if (this.singleBuild(sk.bldTabChildren(), 'workshop')) {
+                console.log('Pass test 2.');
+                sk.tasks.ensureContentExists('Workshop');
+                if (this.singleTech(game.workshopTab.buttons, ['fluxCondensator'])) {
+                    console.log('Pass test 3.');
+                    this.reset();
+                }
+            }
+        }
+
+        game.msg('hoglaTrade was unable to close the loop.');
+        return true;
+    }
+
+    cryEngine(action) {
+        var maxCryo = 3000;
+        // Plan: grind lots of paragon by resetting fast without waiting for
+        // kittens to arrive. Because cryochambers mean we already have enough
+        // 1. Tech Up
+        // 2. Chronocontrol -> Chronosurge
+        // 3. Mass Chronospheres
+        // 4. Enough batteries for CS * 45? (parameter)
+        // 5. shift-fix-cryo, shatter, repeat
+        //
+        // In more detail:
+        //  1. allow exotics
+        //  3. need to elder trade for BPs and TCs
+
+        switch (action) {
+            case 'init': // -> build-start, build-upgrade, workshop-mid, trade-zebras, trade-hunt, policy
+                this.model.auto.explore = true;
+                this.model.auto.party = true;
+                this.model.auto.research = true;
+                this.model.minor.conserveExotic = false;
+                this.state.push('build-workshop');
+                this.state.push('trade-once');
+                this.state.push('chrono-start');
+                return true;
+
+            case 'build-workshop': // -|
+                // and for access to upgrades
+                if (this.singleBuild(sk.bldTabChildren(), 'workshop')) {
+                    sk.tasks.ensureContentExists('Workshop');
+                    return true;
+                }
+                return false;
+
+            case 'trade-once': // -|
+                // 3000 CS will cost ~e200 of the resources, which is mostly negligible
+                // except BP, so trade every run
+                sk.tasks.ensureContentExists('Trade'); // create button
+                const lizards = game.diplomacy.get('lizards');
+                if (lizards && lizards.unlocked) {
+                    const tradeFifth = Math.floor(game.diplomacy.getMaxTradeAmt(lizards) / 5);
+                    game.diplomacy.tradeMultiple(lizards, tradeFifth);
+                    return true; // we only trade once, if that's not enough, time to die
+                }
+                return false;
+
+            case 'chrono-start': // -> chrono-mid
+                sk.tasks.ensureContentExists('Time');
+                if (this.singleBuild(game.timeTab.vsPanel.children[0].children, 'chronocontrol')) {
+                    this.state.push('chrono-mid');
+                    return true;
+                }
+                return false;
+
+            case 'chrono-mid': // -> chrono-end
+                if (this.singleTech(game.workshopTab.buttons, ['turnSmoothly', 'chronoforge', 'fluxCondensator'])) {
+                    sk.tasks.ensureContentExists('Time');
+                    this.state.push('chrono-end');
+                    return true;
+                }
+                return false;
+
+            case 'chrono-end': // -> fix-start
+                var batteryCount = Math.ceil((maxCryo * 500 + 15000) / 750);
+                if (this.massBuild(game.timeTab.cfPanel.children[0].children, 'temporalBattery', batteryCount)) {
+                    this.state.push('fix-start');
+                    return true;
+                }
+                return false;
+
+            case 'fix-start': // -> fix-loop
+                if (this.massBuild(sk.bldTabChildren(), 'chronosphere', maxCryo)
+                    && this.singleBuild(game.timeTab.vsPanel.children[0].children, 'cryochambers')) {
+                    this.state.push('fix-loop');
+                    return true;
+                }
+                return false;
+
+            case 'fix-loop': // -> end-start
+                // this.model.auto.flux = true;
+                sk.tasks.fixCryochamber(true);
+                const btn = game.timeTab.cfPanel.children[0].children[0];
+                btn.controller.doShatterAmt(btn.model, 500);
+                if (game.time.getVSU('usedCryochambers').on === 0) {
+                    this.state.push('pop-max');
+                    return true;
+                }
+                return false;
+
+            case 'pop-max': // -> pop-max-space
+                var kittens = game.resPool.get('kittens');
+                if (kittens.value == kittens.maxValue) {
                     this.reset();
                     return true;
                 }
