@@ -10,54 +10,37 @@ If you want to use this, you need to load it into the browser. The easiest way i
 
     javascript:(function(){var d=document,s=d.createElement('script');s.src='https://cdn.jsdelivr.net/gh/JonathanBeverley/KittensGame/ScriptKitties.js';d.body.appendChild(s);})();
 
-Alternatively, you can paste the contents of the script into the developer console.
-I'm sure there's a better way to do it, probably using GreaseMonkey or similar.
+Alternatively, you can paste the contents of the script into the developer console. If you use TamperMonkey, or similar, you can use [autoload.user.js](autoload.user.js).
 
-Once loaded, the button to get to the ScriptKitties option menu is in the bottom right "footer" links.
+Once loaded, the button to get to the ScriptKitties option menu is in the bottom right "footer" links. It's very small, people often don't notice it at first.
 
 ## What does it do?
 
-Currently this script will automatically do the following:
+Currently this script can be set to automate the following:
 
-1) Build
-2) Craft
-3) Assign
-5) Hunt
-6) Trade
-7) Praise
-8) Festival
+**BUILD:** ScriptKitties will automatically build any of the buildings on the Bonfire tab, and it lets you choose exactly which ones you want! If you want to turn on or off an entire group of buildings, just click the header. For space buildings, click the small "space" link in the upper corner. Religion and Time building are both grouped together under "time".
 
-9) Build Embassies
-10) Maintain Cycle
-11) Research Science
-12) Workshop Upgrades
-13) Order of the Sun
-14) Unicorn Structures
-15) Energy Control
-16) BlackCoin Trading
+**ASSIGN:** Lazy kittens not doing anything? Give a specified role to all those "free" kittens! There is now a "Smart" option, which will try to balance kittens between various jobs.
 
-
-## What are some interesting details?
-
-**BUILD:** ScriptKitties will automatically build any of the buildings on the Bonfire tab, and it lets you choose exactly which ones you want! If you want to turn on or off an entire group of buildings, just click the header. For space buildings, click the small "space" link in the upper corner.
-
-**ASSIGN:** Lazy kittens not doing anything? Give a specified role to all those "free" kittens!
-
-**CRAFT:** ScriptKitties keeps your resources from capping out! You can be sure to keep a healthy supply of crafted resources coming!
+**CRAFT:** ScriptKitties keeps your resources from capping out! You can be sure to keep a healthy supply of crafted resources coming! The "secondary craft" ratio helps control how much to craft. If the amount of product drops below the "minimum", it will craft some before you hit the capacity, useful when storage gets large. Conversely, the "maximum" controls the ratio for input resources that have unlimited storage.
 
 **HUNT:** Don't let your catpower go to waste! Automatically send your kittens on hunting expeditions to get your furs, ivory, and unicorns!
 
-**TRADE:** Automagically trade with Zebras, Dragons, and the Elders! Keep your titanium stores full and never miss a visit from the Elders!
+**TRADE:** Automagically trade with Zebras and the Elders! Keep your titanium stores full and never miss a visit from the Elders! Elder trade can be disabled in the minor options.
 
 **PRAISE:** Want a praise bonus that will make a difference? Turn on Auto Praise and see your faith based productivity skyrocket by praising the sun every tick!
 
-**FESTIVAL:** If you have the resources, ScriptKitties will keep the party going!
+**PARTY:** If you have the resources, ScriptKitties will keep the festival going!
 
 **EMBASSIES:** Do you like trading? Embassies help trading. How about automatically building the cheapest one every time culture maxes out?
 
+**EXPLORE:** Automatically sends out explorers whenever a new civilization can be reached.
+
 **CYCLES:** Master time itself! Always enjoy the benefits of your favourite cycle!
 
-**RESEARCH:** Don't let your kitten kingdom stagnate! As soon as you have the requirements, ScriptKitties will make sure to research new technologies for you.
+**SHATTERSTORM:** Is there some strange reason you'd like to shatter as often as heat allows? Well, then this is the option for you. If Auto Cycle is also set, you'll always end the shatterstorm in your chosen cycle.
+
+**SCIENCE:** Don't let your kitten kingdom stagnate! As soon as you have the requirements, ScriptKitties will make sure to research new technologies for you.
 
 **UPGRADE:** Want to upgrade your buildings and abilities, but don't want to just sit there waiting? Let the script make upgrades whenever you are able!
 
@@ -67,9 +50,33 @@ Currently this script will automatically do the following:
 
 **ENERGY:** Don't worry about having negative energy or wasted potential! Turn on Energy Control, and you will stay between 0 and 3 Watts of surplus power!
 
+**TEMPUS FUGIT:** Time doesn't fly when you don't have this set! Will try to use flux as often as possible, but keeps a reserve for getting Chronosurge next run.
+
 You can use this script as much or as little as you like, but if you turn on all the options, it will basically run the Kittens Game from reset to reset.
 
 Enjoy!
+
+## Minor Options
+These are a set of smaller options that do not warrant space in the main UI. Most are fairly obvious, primarily due to the longer names allowed by the menu.
+
+Praise After Religion: If Auto Religion determines that all options are limited by capacity, it will turn on Auto Praise. Note that it will not turn it back off when storage increases.
+
+Conserve Exotic Resources: Prevents Auto Science and Auto Upgrade from using relics, void, antimatter, blackcoin, flux, and similar.
+
+Unicorn Ivory Optimization: By default, Auto Unicorn optimizes for Tears, later on, Ivory becomes the limiting factor, and this option tells it to switch to that.
+
+## What does Auto Play do?
+Auto Play is a series of scripts for fully automating parts of mid, late, and endgame. They are customized to my game state at the point I needed them. If they do not seem to work, check the console. They are likely to have more bugs than the rest of the code. Most of thme are intended to run reset-to-reset, and if you permit Auto Play to reset, they can run unattended for hours or weeks.
+
+Fast Paragon: rapidly resets (~40 minutes) with near max housing, five chronospheres, and flux condensator.
+
+DF ChronoExpo: build 67+ chronospheres by shattering until Dark Future. Goal is to exponentiate relic/void/antimatter storage. Will spend some antimatter on AI Cores to optimize.
+
+Short ChronoExpo: as above, but without waiting for Dark Future. This option bleeds time crystals.
+
+Hoglagame - {Hunt,Mint,Trade}: very rapid resets for the post 100-CS era. The suffix is how to manage catpower.
+
+CryEngine: cry some more.
 
 ## Tsolron's notable modifications:
 * Can autocraft resources without also auto-crafting furs to Parchment (or others in that line)
@@ -90,7 +97,6 @@ Enjoy!
 * "Auto Cycle" won't stop just because the fabric of spacetime is melting due to chronoheat. Build some Furnaces.
 * Try to keep Coal generation less than Iron generation so that Plates get crafted.
 * Early game, the script will make poor choices, because it does what is cheapest.
-* The script won't craft any resource that you haven't "unlocked", which roughly means "is visible on the left panel". You need to craft one of each manually to prime the pump.
 
 ## Any special thanks?
 
