@@ -8,6 +8,12 @@ var SK = class {
         this.loadOptions();
     }
 
+    bldTabChildren() {
+        var children = game.bldTab.children;
+        if (children.length === 0) children = game.bldTab.buttons
+        return children;
+    }
+
     clearScript() {
         this.tasks.halt();
         this.model.wipe();
@@ -640,7 +646,7 @@ SK.Tasks = class {
             $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger('click');
         }
         if (this.model.auto.craft && game.bld.get('workshop').val < 1 && game.bld.get('hut').val < 5) {
-            if (game.bldTab.children[1].model.enabled) {
+            if (sk.bldTabChildren()[1].model.enabled) {
                 $(`.btnContent:contains(${$I('buildings.refineCatnip.label')})`).trigger('click');
             }
         }
@@ -659,7 +665,7 @@ SK.Tasks = class {
         let built = false;
         if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
             const cb = this.model.cathBuildings;
-            for (var button of game.bldTab.children) {
+            for (var button of sk.bldTabChildren()) {
                 if (! button.model.metadata) continue;
                 const name = button.model.metadata.name;
                 if (button.model.enabled && cb[name].enabled
