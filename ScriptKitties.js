@@ -1620,7 +1620,7 @@ SK.Scripts = class {
     static listScripts() {
         return [ // format is chosen to match things like game.calendar.cycles
             {name:'test',        title:'Test Script'},
-            {name:'fastParagon', title:'Fast Reset'},
+            {name:'fastParagon', title:'Fast Paragon'},
             {name:'slowloop',    title:'DF ChronoExpo'},
             {name:'fastloop',    title:'Short ChronoExpo'},
             {name:'hoglaHunt',   title:'Hoglagame - Hunt'},
@@ -1692,7 +1692,8 @@ SK.Scripts = class {
                     continue;
                 }
                 if (! button.model.enabled) button.controller.updateEnabled(button.model);
-                if (button.model.enabled) { // TODO testing
+                if (! button.model.visible) button.controller.updateVisible(button.model);
+                if (button.model.enabled && button.model.visible) {
                     button.controller.buyItem(button.model, {}, function(result) {
                         if (result) button.update();
                     });
@@ -1874,6 +1875,7 @@ SK.Scripts = class {
             game.reset();
         } else {
             sk.gui.refresh();
+            sk.saveOptions();
             game.msg('Auto Play Reset not permitted. Script Terminating.');
         }
     }
@@ -2745,17 +2747,27 @@ SK.Scripts = class {
             case 'init': // -> build-start, build-upgrade, workshop-mid, trade-zebras, trade-hunt, policy
                 this.model.auto.explore = true;
                 this.model.auto.party = true;
-                this.model.auto.research = true;
                 this.model.minor.conserveExotic = false;
                 this.state.push('build-workshop');
+                this.state.push('science-start');
                 this.state.push('trade-once');
                 this.state.push('chrono-start');
+                this.turbo = true;
                 return true;
 
             case 'build-workshop': // -|
                 // and for access to upgrades
                 if (this.singleBuild(sk.bldTabChildren(), 'workshop')) {
                     sk.tasks.ensureContentExists('Workshop');
+                    return true;
+                }
+                return false;
+
+            case 'science-start': // -|
+                sk.tasks.ensureContentExists('Science');
+                if (this.singleTech(game.libraryTab.buttons, ['tachyonTheory', 'voidSpace', 'paradoxalKnowledge'])) {
+                    sk.tasks.ensureContentExists('Time');
+                    this.state.push('chrono-end');
                     return true;
                 }
                 return false;
@@ -2799,7 +2811,6 @@ SK.Scripts = class {
             case 'fix-start': // -> fix-loop
                 if (this.massBuild(sk.bldTabChildren(), 'chronosphere', maxCryo)
                     && this.singleBuild(game.timeTab.vsPanel.children[0].children, 'cryochambers')) {
-                    this.turbo = true;
                     this.state.push('fix-loop');
                     return true;
                 }
