@@ -789,9 +789,9 @@ SK.Tasks = class {
 
     // Hunt automatically
     autoHunt(ticksPerCycle) {
-        if (this.model.auto.hunt && game.villageTab.visible) {
+        if (this.model.auto.hunt) {
             const catpower = game.resPool.get('manpower');
-            if (catpower.value > (catpower.maxValue - 1)) {
+            if (catpower.value >= 100 && catpower.value > (catpower.maxValue - 1)) {
                 game.village.huntAll();
             }
         }
@@ -1393,45 +1393,47 @@ SK.Tasks = class {
     // Explore for new Civs
     autoExplore(ticksPerCycle) {
         let available = false;
-        if (this.model.auto.explore && game.diplomacyTab.visible && game.resPool.get('manpower').value >= 1000) {
+        if (this.model.auto.explore) {
             this.ensureContentExists('Trade');
+            if (game.diplomacyTab.visible && game.resPool.get('manpower').value >= 1000) {
 
-            for (const race of game.diplomacy.races) {
-                if (race.unlocked) continue;
-                switch (race.name) {
-                    case 'lizards': case 'sharks': case 'griffins':
-                        available = true;
-                        break;
-                    case 'nagas':
-                        available = game.resPool.get('culture').value >= 1500;
-                        break;
-                    case 'zebras':
-                        available = game.resPool.get('ship').value >= 1;
-                        break;
-                    case 'spiders':
-                        available = game.resPool.get('ship').value >= 100 && game.resPool.get('science').maxValue > 125000;
-                        break;
-                    case 'dragons':
-                        available = game.science.get('nuclearFission').researched;
-                        break;
-                    case 'leviathans':
-                        break;
-                    default:
-                        console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
-                }
-                if (available) break;
-            }
-            if (available) {
-                const button = game.diplomacyTab.exploreBtn;
-                button.controller.buyItem(button.model, {}, function(result) {
-                    if (result) {
-                        available = true;
-                        game.diplomacyTab.render($('div.tabInner.Trade')[0]); // create race panel
+                for (const race of game.diplomacy.races) {
+                    if (race.unlocked) continue;
+                    switch (race.name) {
+                        case 'lizards': case 'sharks': case 'griffins':
+                            available = true;
+                            break;
+                        case 'nagas':
+                            available = game.resPool.get('culture').value >= 1500;
+                            break;
+                        case 'zebras':
+                            available = game.resPool.get('ship').value >= 1;
+                            break;
+                        case 'spiders':
+                            available = game.resPool.get('ship').value >= 100 && game.resPool.get('science').maxValue > 125000;
+                            break;
+                        case 'dragons':
+                            available = game.science.get('nuclearFission').researched;
+                            break;
+                        case 'leviathans':
+                            break;
+                        default:
+                            console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
                     }
-                });
+                    if (available) break;
+                }
+                if (available) {
+                    const button = game.diplomacyTab.exploreBtn;
+                    button.controller.buyItem(button.model, {}, function(result) {
+                        if (result) {
+                            available = true;
+                            game.diplomacyTab.render($('div.tabInner.Trade')[0]); // create race panel
+                        }
+                    });
+                }
             }
+            return available;
         }
-        return available;
     }
 
     // Auto buy unicorn upgrades
@@ -1554,10 +1556,10 @@ SK.Tasks = class {
             const flux = game.resPool.get('temporalFlux').value;
             const reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
             const fixcost = 3000;
-            const forfugit = game.time.heat / game.getEffect('heatPerTick');
-            if (flux > reserve + forfugit + fixcost) {
+            if (flux > reserve + fixcost) {
                 this.fixCryochamber();
                 if (flux > 0) game.time.isAccelerated = true;
+                return true; // might need to build another
             } else if (flux > reserve) {
                 // clicking the toggle-switch is HARD, this is fine as long as flux > 0
                 if (flux > 0) game.time.isAccelerated = true;
