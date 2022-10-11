@@ -99,6 +99,7 @@ SK.Model = class {
             unicornIvory: 'Unicorn Ivory Optimization',
             conserveExotic: 'Conserve Exotic Resources',
             elderTrade: 'Auto Trade with the Elders',
+            autoFixCC: 'Auto use Flux to fix Cryo Chambers',
             permitReset: 'Permit Auto Play to Reset',
         };
 
@@ -1570,14 +1571,15 @@ SK.Tasks = class {
 
     // Automatically use flux for fixing CCs and tempus fugit
     autoFlux(ticksPerCycle) {
+        let result = false;
         if (this.model.auto.flux && game.timeTab.visible) {
             const flux = game.resPool.get('temporalFlux').value;
             const reserve = 10000 + 2 * ticksPerCycle; // actual is 9500; round numbers and margin of error
             const fixcost = 3000;
-            if (flux > reserve + fixcost) {
+            if (flux > reserve + fixcost && this.model.minor.autoFixCC) {
                 this.fixCryochamber();
-                if (flux > 0) game.time.isAccelerated = true;
-                return true; // might need to build another
+                if (game.resPool.get('temporalFlux').value > 0) game.time.isAccelerated = true;
+                result = true; // might need to build another
             } else if (flux > reserve) {
                 // clicking the toggle-switch is HARD, this is fine as long as flux > 0
                 if (flux > 0) game.time.isAccelerated = true;
@@ -1590,7 +1592,7 @@ SK.Tasks = class {
             game.time.isAccelerated = false;
             this.model.managedFugit = false;
         }
-        return false;
+        return result;
     }
 
     fixCryochamber(all = false) {
