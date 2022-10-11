@@ -980,8 +980,12 @@ SK.Tasks = class {
     smartAssign() {
         if (game.calendar.day < 0) return false; // temporal paradox messes up the cache
         const limits={};
-        const kittens = game.village.getKittens();
         const fugit = game.time.isAccelerated ? 1.5 : 1;
+
+        // For Anarchy, add how many kittens are working or willing to work
+        const kittens = game.village.jobs.reduce(function(m,job) {
+            return m + job.value;
+        }, game.village.getFreeKittens());
 
         // Default Job Ratio. Will try to aim for this.
         const jobRatio = {
