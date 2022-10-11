@@ -1693,7 +1693,7 @@ SK.Scripts = class {
 
     massBuild(buttons, building, count) {
         for (var button of buttons) {
-            if (button.model.metadata?.name != building) continue;
+            if (button.model?.metadata?.name != building) continue;
             let remaining = count - button.model.on;
             if (remaining <= 0) return true; // we've already got enough
             if (! button.model.enabled) button.controller.updateEnabled(button.model);
@@ -2786,7 +2786,7 @@ SK.Scripts = class {
 
             case 'science-start': // -|
                 sk.tasks.ensureContentExists('Science');
-                if (this.singleTech(game.libraryTab.buttons, ['tachyonTheory', 'voidSpace', 'paradoxalKnowledge'])) {
+                if (this.singleTech(game.libraryTab.buttons, ['calendar', 'tachyonTheory', 'voidSpace', 'paradoxalKnowledge'])) {
                     sk.tasks.ensureContentExists('Time');
                     this.state.push('chrono-end');
                     return true;
