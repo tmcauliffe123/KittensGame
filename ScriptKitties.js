@@ -791,7 +791,8 @@ SK.Tasks = class {
     autoHunt(ticksPerCycle) {
         if (this.model.auto.hunt) {
             const catpower = game.resPool.get('manpower');
-            if (catpower.value >= 100 && catpower.value > (catpower.maxValue - 1)) {
+            if (game.ui.fastHuntContainer.style.display == 'block'
+                && catpower.value > (catpower.maxValue - 1)) {
                 game.village.huntAll();
             }
         }
