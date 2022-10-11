@@ -988,7 +988,7 @@ SK.Tasks = class {
         }, game.village.getFreeKittens());
 
         // Default Job Ratio. Will try to aim for this.
-        const jobRatio = {
+        const targetRatios = {
             'farmer':    0.05,
             'woodcutter':0.20,
             'miner':     0.20,
@@ -997,6 +997,19 @@ SK.Tasks = class {
             'scholar':   0.10,
             'priest':    0.10,
         };
+        // Calculate ratios based on the jobs available (especially for Atheism)
+        const totalWeight = game.village.jobs.reduce(function(m,job) {
+            if (targetRatios[job.name] && job.unlocked) {
+                m += targetRatios[job.name];
+            }
+            return m;
+        }, 0);
+        let jobRatio = {};
+        for (const job of game.village.jobs) {
+            if (targetRatios[job.name] && job.unlocked) {
+                jobRatio[job.name] = targetRatios[job.name] / totalWeight;
+            }
+        }
 
         // first calculate (and enforce) "hard" limits:
         for (const job of game.village.jobs) {
