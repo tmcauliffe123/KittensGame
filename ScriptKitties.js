@@ -2751,7 +2751,7 @@ SK.Scripts = class {
     }
 
     cryEngine(action) {
-        var maxCryo = 3000;
+        var maxCryo = 4000;
         // Plan: grind lots of paragon by resetting fast without waiting for
         // kittens to arrive. Because cryochambers mean we already have enough
         // 1. Tech Up
@@ -2830,19 +2830,29 @@ SK.Scripts = class {
                 return false;
 
             case 'fix-start': // -> fix-loop
-                if (this.massBuild(sk.bldTabChildren(), 'chronosphere', maxCryo)
-                    && this.singleBuild(game.timeTab.vsPanel.children[0].children, 'cryochambers')) {
+                if (! this.massBuild(sk.bldTabChildren(), 'chronosphere', maxCryo)) {
+                    return false;
+                } else if (! this.singleBuild(game.timeTab.cfPanel.children[0].children, 'temporalAccelerator')) {
+                    return false;
+                } else if (game.time.getVSU('usedCryochambers').val < maxCryo
+                        && ! this.massBuild(game.timeTab.vsPanel.children[0].children, 'cryochambers', 2)) {
+                    return false;
+                } else {
+                    // Seems to be the best way to handle enabling testShatter...
+                    var ta = game.time.getCFU('temporalAccelerator');
+                    ta.isAutomationEnabled = true;
+                    ta.calculateEffects(ta, game);
                     this.state.push('fix-loop');
                     return true;
                 }
-                return false;
 
             case 'fix-loop': // -> end-start
                 // this.model.auto.flux = true;
                 sk.tasks.fixCryochamber(true);
                 const btn = game.timeTab.cfPanel.children[0].children[0];
                 btn.controller.doShatterAmt(btn.model, 500);
-                if (game.time.getVSU('usedCryochambers').on === 0) {
+                if (game.time.getVSU('usedCryochambers').on === 0
+                        || game.time.getVSU('cryochambers').val >= maxCryo) {
                     this.turbo = false;
                     this.state.push('pop-max');
                     return true;
@@ -2851,7 +2861,7 @@ SK.Scripts = class {
 
             case 'pop-max': // -> pop-max-space
                 var kittens = game.resPool.get('kittens');
-                if (kittens.value === kittens.maxValue) {
+                if (kittens.value >= kittens.maxValue || kittens.value >= maxCryo) {
                     this.reset();
                     return true;
                 }
