@@ -45,7 +45,7 @@ var SK = class {
             script.id = 'SK_origin';
             document.body.appendChild(script);
         } else {
-            console.error('No <script> found with id=="SK_origin"');
+            console.error('No <script> found with id==="SK_origin"');
         }
     }
 
@@ -210,7 +210,7 @@ SK.Model = class {
     buildGroup(buildings, dict) {
         const group = [];
         for (const building of buildings) {
-            if (buildings==game.religion.zigguratUpgrades && building.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
+            if (buildings === game.religion.zigguratUpgrades && building.effects.unicornsRatioReligion) continue; // covered by autoUnicorn()
             let label = building.stages?.map((x) => x.label).join(' / '); // for 'Library / Data Center', etc
             label ||= building.label;
             dict[building.name] = {label: label, enabled: false};
@@ -400,12 +400,12 @@ SK.Gui = class {
         script ||= `sk.model.option.${option}=this.value;`;
         let dropdown = `<select id="${element}" style="{{grid}}" onchange="${script}">`;
         for (const name of extras) {
-            const sel = (name == this.model.option[option]) ? ' selected="selected"' : '';
+            const sel = (name === this.model.option[option]) ? ' selected="selected"' : '';
             const title = name[0].toUpperCase() + name.slice(1);
             dropdown += `<option value="${name}"${sel}>${title}</option>`;
         }
         for (const item of items) {
-            const sel = (item.name == this.model.option[option]) ? ' selected="selected"' : '';
+            const sel = (item.name === this.model.option[option]) ? ' selected="selected"' : '';
             let title = item.title;
             if (item.glyph) title = item.glyph + ' ' + title;
             dropdown += `<option value="${item.name}"${sel}>${title}</option>`;
@@ -506,7 +506,7 @@ SK.Tasks = class {
         if (game.isPaused) return; // we pause too
         const ticks = game.timer.ticksTotal;
         for (const task of this.schedule) {
-            if (task.override || ticks % task.interval == task.offset) {
+            if (task.override || ticks % task.interval === task.offset) {
                 task.override = this[task.fn](task.interval, task.override);
             }
         }
@@ -538,16 +538,16 @@ SK.Tasks = class {
         //
         const total = {};
         for (const effect of ['energyProduction', 'energyConsumption']) {
-            const sign = effect == 'energyProduction' ? '+' : '-';
+            const sign = effect === 'energyProduction' ? '+' : '-';
             total[effect] = 0;
             for (const source of [game.bld.buildingsData, game.space.planets, game.time.chronoforgeUpgrades, game.time.voidspaceUpgrades]) {
                 for (let shim of source) {
                     shim = shim.buildings ? shim.buildings : [shim];
                     for (const building of shim) {
                         const stage = building.stage ? building.stages[building.stage] : building;
-                        if (! stage.effects || building.val == 0) continue;
+                        if (! stage.effects || building.val === 0) continue;
                         let eper = stage.effects[effect];
-                        if (building.name == 'pasture' && effect == 'energyProduction') {
+                        if (building.name === 'pasture' && effect === 'energyProduction') {
                             // deal with Solar Farms. Peak is in summer(1), Low in winter(3). Report low, mention high.
                             const cep = building.stages[building.stage].calculateEnergyProduction;
                             eper = cep(game, 3);
@@ -573,23 +573,23 @@ SK.Tasks = class {
 
     ensureContentExists(tabId) {
         // only work for visible tabs
-        const tab = game.tabs.find((tab) => tab.tabId==tabId);
+        const tab = game.tabs.find((tab) => tab.tabId===tabId);
         if (! tab.visible) return false;
 
         let doRender = false;
         switch (tabId) {
             case 'Science':
-                doRender = (tab.buttons.length == 0 || ! tab.policyPanel);
+                doRender = (tab.buttons.length === 0 || ! tab.policyPanel);
                 break;
             case 'Workshop':
-                doRender = (tab.buttons.length == 0);
+                doRender = (tab.buttons.length === 0);
                 break;
             case 'Trade':
-                doRender = (tab.racePanels.length == 0 || ! tab.exploreBtn);
+                doRender = (tab.racePanels.length === 0 || ! tab.exploreBtn);
                 break;
             case 'Religion':
-                doRender = (tab.zgUpgradeButtons.length == 0 && game.bld.get('ziggurat').on > 0
-                    || tab.rUpgradeButtons.length == 0 && !game.challenges.isActive("atheism"));
+                doRender = (tab.zgUpgradeButtons.length === 0 && game.bld.get('ziggurat').on > 0
+                    || tab.rUpgradeButtons.length === 0 && !game.challenges.isActive("atheism"));
                 // ctPanel is set during constructor, if it's not there we're pooched
                 break;
             case 'Space':
@@ -666,7 +666,7 @@ SK.Tasks = class {
     // Build buildings automatically
     autoBuild(ticksPerCycle) {
         let built = false;
-        if (this.model.auto.build && game.ui.activeTabId == 'Bonfire') {
+        if (this.model.auto.build && game.ui.activeTabId === 'Bonfire') {
             const cb = this.model.cathBuildings;
             for (var button of sk.bldTabChildren()) {
                 if (! button.model.metadata) continue;
@@ -749,9 +749,9 @@ SK.Tasks = class {
                 }
 
                 craftCount = Math.max(craftCount, minimumReserve);
-                if (craftCount == 0 || craftCount == Infinity) {
+                if (craftCount === 0 || craftCount === Infinity) {
                     // nothing to do, or no reason to act
-                } else if (this.model.option.book == 'blueprint' && output == 'compedium' && game.resPool.get('compedium').value > 25) {
+                } else if (this.model.option.book === 'blueprint' && output === 'compedium' && game.resPool.get('compedium').value > 25) {
                     // save science for making blueprints
                 } else {
                     game.craft(output, craftCount);
@@ -795,7 +795,7 @@ SK.Tasks = class {
     autoHunt(ticksPerCycle) {
         if (this.model.auto.hunt) {
             const catpower = game.resPool.get('manpower');
-            if (game.ui.fastHuntContainer.style.display == 'block'
+            if (game.ui.fastHuntContainer.style.display === 'block'
                 && catpower.value > (catpower.maxValue - 1)) {
                 game.village.huntAll();
             }
@@ -835,9 +835,9 @@ SK.Tasks = class {
         if (this.model.minor.program && game.spaceTab.visible) {
             this.ensureContentExists('Space');
             for (var program of game.spaceTab.GCPanel.children) {
-                if (program.model.metadata.unlocked && program.model.on == 0) {
+                if (program.model.metadata.unlocked && program.model.on === 0) {
                     // hack to allow a limit on how far out to go
-                    if (typeof(this.model.minor.program) == 'number') {
+                    if (typeof(this.model.minor.program) === 'number') {
                         const chart = program.model.metadata.prices.find((p) => p.name === 'starchart');
                         if (this.model.minor.program < chart.val) continue;
                     }
@@ -903,7 +903,7 @@ SK.Tasks = class {
             if (catpower >= 1500 && culture >= 5000 && parchment >= 2500) {
                 if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays <= 400*(this.model.minor.partyLimit - 1)) {
                     game.village.holdFestival(1);
-                } else if (game.calendar.festivalDays == 0) {
+                } else if (game.calendar.festivalDays === 0) {
                     game.village.holdFestival(1);
                 }
             }
@@ -1222,7 +1222,7 @@ SK.Tasks = class {
             if (button.model.metadata.researched || ! button.model.metadata.unlocked) continue;
             let cost = 0;
             for (const price of button.model.prices) {
-                if (price.name == 'science') {
+                if (price.name === 'science') {
                     cost = price.val;
                 } else if (this.model.minor.conserveExotic && this.model.exoticResources.includes(price.name)) {
                     continue techloop;
@@ -1484,13 +1484,13 @@ SK.Tasks = class {
                     let value = 0;
                     if (! this.model.minor.unicornIvory) {
                         const tearCost = button.model.prices.find((element) => element.name==='tears');
-                        if (tearCost == null) continue;
+                        if (tearCost === null) continue;
                         const ratio = button.model.metadata.effects.unicornsRatioReligion;
                         const rifts = button.model.metadata.effects.riftChance || 0;
                         value = (ratio * ups + rifts * upsprc) / tearCost.val;
                     } else {
                         const ivoryCost = button.model.prices.find((element) => element.name==='ivory');
-                        if (ivoryCost == null) continue;
+                        if (ivoryCost === null) continue;
                         const ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
                         const chance = button.model.metadata.effects.ivoryMeteorChance || 0;
                         value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
@@ -1507,7 +1507,7 @@ SK.Tasks = class {
                 let tearCost = 0;
                 let otherCosts = true;
                 for (const price of bestButton.model.prices) {
-                    if (price.name == 'tears') {
+                    if (price.name === 'tears') {
                         tearCost = price.val;
                     } else if (price.val > game.resPool.get(price.name).value) {
                         otherCosts = false;
@@ -1657,7 +1657,7 @@ SK.Scripts = class {
     }
 
     run(script) {
-        if (this.state.length == 0) return;
+        if (this.state.length === 0) return;
 
         // prep
         const oldConfirm = game.ui.confirm; // for policies and building upgrades
@@ -1731,7 +1731,7 @@ SK.Scripts = class {
                 }
             }
         }
-        return count == targets.length;
+        return count === targets.length;
     }
 
     singleUpgrade(buildings) {
@@ -1740,7 +1740,7 @@ SK.Scripts = class {
             if (! button.controller.upgrade) continue; // easy filter for upgradable buildings
             const metadata = button.model.metadata;
             if (buildings.includes(metadata.name)) {
-                if (metadata.stage == metadata.stages.length - 1) {
+                if (metadata.stage === metadata.stages.length - 1) {
                     count += 1;
                 } else if (metadata.stages[metadata.stage+1].stageUnlocked) {
                     button.controller.upgrade(button.model);
@@ -1748,7 +1748,7 @@ SK.Scripts = class {
                 }
             }
         }
-        return count == buildings.length;
+        return count === buildings.length;
     }
 
     craftFor(manager, buildings) {
@@ -1775,7 +1775,7 @@ SK.Scripts = class {
     isCapped(buttons, target) {
         for (const button of buttons) {
             if (button.model.metadata?.name != target) continue;
-            return button.model.resourceIsLimited == true;
+            return button.model.resourceIsLimited === true;
         }
         return false; // if we can't find it, we haven't even begun to build it
     }
@@ -1863,19 +1863,19 @@ SK.Scripts = class {
             return base.concat(pp.children);
         }, []))) {
             if (! button?.model?.metadata) continue;
-            if (button.model.metadata.name == 'chronosphere') continue; // never sell
-            if (button.model.metadata.name == 'moonBase') moonButton = button;
+            if (button.model.metadata.name === 'chronosphere') continue; // never sell
+            if (button.model.metadata.name === 'moonBase') moonButton = button;
             var sell = true;
             for (const effect in button.model.metadata.effects) {
-                if (effect.substr(-3, 3) == 'Max' || effect == 'maxKittens') {
+                if (effect.substr(-3, 3) === 'Max' || effect === 'maxKittens') {
                     sell = false;
                     break;
                 }
             }
-            if (sell == true) button.controller.sell(sellAll, button.model);
+            if (sell === true) button.controller.sell(sellAll, button.model);
         }
         // and sell Moon Bases, because it's worth it for the UO boost
-        if (sell == true && moonButton) moonButton.controller.sell(sellAll, moonButton.model);
+        if (sell === true && moonButton) moonButton.controller.sell(sellAll, moonButton.model);
     }
 
     reset() {
@@ -1999,7 +1999,7 @@ SK.Scripts = class {
                     'aiCore': this.buildingCount('aiCore', 'antimatter', 0.01), // spend up to 1% of antimatter
                 };
                 for (const bname in this.model.cathBuildings) {
-                    if (bname.slice(0, 5) == 'zebra') continue;
+                    if (bname.slice(0, 5) === 'zebra') continue;
                     this.model.cathBuildings[bname].enabled = true;
                 }
                 for (const bname in climit) this.model.cathBuildings[bname].limit = climit[bname];
@@ -2087,7 +2087,7 @@ SK.Scripts = class {
                 return false;
 
             case 'trade-zebras': // -> trade-on
-                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name=='zebras');
+                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name==='zebras');
                 if (!zebraPanel) return false;
                 var button = zebraPanel.embassyButton;
                 while (button.model.enabled) {
@@ -2154,7 +2154,7 @@ SK.Scripts = class {
                 return false;
 
             case 'endgame': // |-> cooldown
-                if (game.calendar.cycle == 3) return false; // Helios cycle lowers UO cap
+                if (game.calendar.cycle === 3) return false; // Helios cycle lowers UO cap
                 if (! this.isCapped(sk.bldTabChildren(), 'chronosphere')) return false;
                 this.model.auto.bcoin = false;
                 this.state.push('ensure-relics');
@@ -2343,7 +2343,7 @@ SK.Scripts = class {
                 return this.singleTech(game.libraryTab.policyPanel.children, policies);
 
             case 'trade-zebras': // -|
-                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name=='zebras');
+                var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name==='zebras');
                 if (!zebraPanel) return false;
                 var button = zebraPanel.embassyButton;
                 while (button.model.enabled) {
@@ -2359,7 +2359,7 @@ SK.Scripts = class {
 
             case 'pop-max-cath': // -> pop-max-space
                 var cathKittens = game.resPool.get('kittens');
-                if (cathKittens.value == cathKittens.maxValue) {
+                if (cathKittens.value === cathKittens.maxValue) {
                     this.model.cathBuildings.magneto.enabled = false; // conserve alloy for stations
                     this.model.spaceBuildings.spaceStation.enabled = true;
                     this.model.auto.religion = false; // start accumulating faith
@@ -2851,7 +2851,7 @@ SK.Scripts = class {
 
             case 'pop-max': // -> pop-max-space
                 var kittens = game.resPool.get('kittens');
-                if (kittens.value == kittens.maxValue) {
+                if (kittens.value === kittens.maxValue) {
                     this.reset();
                     return true;
                 }
