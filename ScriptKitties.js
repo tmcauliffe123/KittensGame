@@ -10,7 +10,7 @@ var SK = class {
 
     bldTabChildren() {
         var children = game.bldTab.children;
-        if (children.length === 0) children = game.bldTab.buttons
+        if (children.length === 0) children = game.bldTab.buttons;
         return children;
     }
 
@@ -110,6 +110,7 @@ SK.Model = class {
         }
 
         // Note: per game: uncommon==luxuries==(trade goods), rare==unicorns+karma, exotic==relics+void+bc+bs
+        // This is the list of resources that conserveExotic cares about
         this.exoticResources = [
             'antimatter', // how is AM not exotic?
             'blackcoin',
@@ -133,6 +134,7 @@ SK.Model = class {
             script: 'none',
         };
         this.minor = {
+            // everything not specified defaults to false
             observe: true,
             conserveExotic: true,
             partyLimit: 10,
@@ -641,7 +643,7 @@ SK.Tasks = class {
     /*** Individual Auto Scripts start here ***/
     /*** These scripts run every tick ***/
 
-    // Collection of Minor Auto Tasks
+    // Basic Bootstrapping, automatically gather catnip and refine it to wood.
     autoNip(ticksPerCycle) {
         if (this.model.auto.build && game.bld.get('field').val < 20) {
             $(`.btnContent:contains(${$I('buildings.gatherCatnip.label')})`).trigger('click');
@@ -759,6 +761,7 @@ SK.Tasks = class {
         return false; // we scale action to need, re-run never required
     }
 
+    // Collection of Minor Auto Tasks
     autoMinor(ticksPerCycle) {
         if (this.model.minor.feed) {
             if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').unlocked) {
@@ -1618,7 +1621,7 @@ SK.Tasks = class {
 };
 
 /**
- * These are the autoPlay scripts. Highly Experimental
+ * These are the autoPlay scripts. Experimental
  **/
 SK.Scripts = class {
     constructor(model) {
@@ -2733,15 +2736,11 @@ SK.Scripts = class {
         }
 
         // Phase 3. Build and reset
-        console.log(chronoCount);
         if (this.massBuild(sk.bldTabChildren(), 'chronosphere', chronoCount)
             || this.massBuild(sk.bldTabChildren(), 'chronosphere', 88)) {
-            console.log('Pass test 1.');
             if (this.singleBuild(sk.bldTabChildren(), 'workshop')) {
-                console.log('Pass test 2.');
                 sk.tasks.ensureContentExists('Workshop');
                 if (this.singleTech(game.workshopTab.buttons, ['fluxCondensator'])) {
-                    console.log('Pass test 3.');
                     this.reset();
                 }
             }

@@ -2,6 +2,7 @@
 A script to automate playing the addicting [Kittens Game](https://kittensgame.com/web/).
 
 Note: This was a fork from the script MaPaul1977 originally made with some modifications by araemo, and others by Tsolron.
+
 Note: This is a _total_ overhaul of the above.
 
 ## How do I use the script?
@@ -66,7 +67,7 @@ Conserve Exotic Resources: Prevents Auto Science and Auto Upgrade from using rel
 Unicorn Ivory Optimization: By default, Auto Unicorn optimizes for Tears, later on, Ivory becomes the limiting factor, and this option tells it to switch to that.
 
 ## What does Auto Play do?
-Auto Play is a series of scripts for fully automating parts of mid, late, and endgame. They are customized to my game state at the point I needed them. If they do not seem to work, check the console. They are likely to have more bugs than the rest of the code. Most of thme are intended to run reset-to-reset, and if you permit Auto Play to reset, they can run unattended for hours or weeks.
+Auto Play is a series of scripts for fully automating parts of mid, late, and endgame. They are customized to my game state at the point I needed them. If they do not seem to work, check the console. They are likely to have more bugs than the rest of the code. Most of them are intended to run reset-to-reset, and if you permit Auto Play to reset, they can run unattended for hours or weeks.
 
 Fast Paragon: rapidly resets (~40 minutes) with near max housing, five chronospheres, and flux condensator.
 
@@ -76,7 +77,7 @@ Short ChronoExpo: as above, but without waiting for Dark Future. This option ble
 
 Hoglagame - {Hunt,Mint,Trade}: very rapid resets for the post 100-CS era. The suffix is how to manage catpower.
 
-CryEngine: cry some more.
+CryEngine: cry some more. (note: does not usefully manage HG)
 
 ## Tsolron's notable modifications:
 * Can autocraft resources without also auto-crafting furs to Parchment (or others in that line)
