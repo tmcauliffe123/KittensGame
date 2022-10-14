@@ -2798,6 +2798,7 @@ SK.Scripts = class {
                 // 3000 CS will cost ~e200 of the resources, which is mostly negligible
                 // except BP, so trade every run
                 sk.tasks.ensureContentExists('Trade'); // create button
+                while (sk.tasks.autoExplore(0)) /*pass*/;
                 const lizards = game.diplomacy.get('lizards');
                 if (lizards && lizards.unlocked) {
                     const tradeFifth = Math.floor(game.diplomacy.getMaxTradeAmt(lizards) / 5);
