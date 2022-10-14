@@ -658,7 +658,7 @@ SK.Tasks = class {
 
     // Auto praise the sun
     autoPraise(ticksPerCycle) {
-        if (this.model.auto.praise && game.bld.get('temple').val > 0) {
+        if (this.model.auto.praise && game.resPool.get("faith") > 0) {
             game.religion.praise();
         }
     }
