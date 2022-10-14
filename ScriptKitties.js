@@ -876,7 +876,7 @@ SK.Tasks = class {
             for (const buttons of buttonGroups) {
                 if (buttons) {
                     for (const button of buttons) {
-                        if (tb[button.id]?.enabled && button.model.metadata.unlocked
+                        if (tb[button.id]?.enabled && button.model?.metadata?.unlocked
                                 && (!tb[button.id].limit || button.model.metadata.val < tb[button.id].limit)) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
@@ -1485,7 +1485,7 @@ SK.Tasks = class {
                     let value = 0;
                     if (! this.model.minor.unicornIvory) {
                         const tearCost = button.model.prices.find((element) => element.name==='tears');
-                        if (tearCost === null) continue;
+                        if (!tearCost) continue;
                         const ratio = button.model.metadata.effects.unicornsRatioReligion;
                         const rifts = button.model.metadata.effects.riftChance || 0;
                         value = (ratio * ups + rifts * upsprc) / tearCost.val;
