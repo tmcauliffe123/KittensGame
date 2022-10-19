@@ -718,7 +718,7 @@ SK.Tasks = class {
                 let minimumReserve = Infinity;
                 for (const input of inputs) {
                     const inRes = game.resPool.get(input.name);
-                    const outVal = outRes.value / game.getCraftRatio(outRes.tag);
+                    const outVal = outRes.value / (1 + game.getCraftRatio(outRes.tag));
                     const inVal = inRes.value / input.val;
                     craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
 
@@ -738,11 +738,11 @@ SK.Tasks = class {
                         }
                     } else {
                         // secondary resource: general
-                        const inMSRR = inVal * (this.model.option.maxSecResRatio / 100);
-                        if (outVal > inMSRR) {
+                        const targetValue = (inVal + outVal) * (this.model.option.maxSecResRatio / 100);
+                        if (outVal >= targetValue) {
                             craftCount = 0;
                         } else {
-                            craftCount = Math.min(craftCount, inMSRR - outVal);
+                            craftCount = Math.min(craftCount, targetValue - outVal);
                         }
                     }
                     // for when our capacity gets large compared to production
