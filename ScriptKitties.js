@@ -1485,13 +1485,13 @@ SK.Tasks = class {
                     let value = 0;
                     if (! this.model.minor.unicornIvory) {
                         const tearCost = button.model.prices.find((element) => element.name==='tears');
-                        if (!tearCost) continue;
+                        if (! tearCost) continue;
                         const ratio = button.model.metadata.effects.unicornsRatioReligion;
                         const rifts = button.model.metadata.effects.riftChance || 0;
                         value = (ratio * ups + rifts * upsprc) / tearCost.val;
                     } else {
                         const ivoryCost = button.model.prices.find((element) => element.name==='ivory');
-                        if (ivoryCost === null) continue;
+                        if (! ivoryCost) continue;
                         const ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
                         const chance = button.model.metadata.effects.ivoryMeteorChance || 0;
                         value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
@@ -1504,7 +1504,7 @@ SK.Tasks = class {
             }
 
             // can we afford it?
-            if (bestButton != null) {
+            if (bestButton) {
                 let tearCost = 0;
                 let otherCosts = true;
                 for (const price of bestButton.model.prices) {
