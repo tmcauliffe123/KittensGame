@@ -731,7 +731,7 @@ SK.Tasks = class {
                         // primary resource
                         const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
                         const surplus = inRes.value + resourcePerCycle - inRes.maxValue;
-                        if (surplus > 0) {
+                        if (0 < surplus && surplus < resourcePerCycle) {
                             craftCount = Math.min(craftCount, surplus / input.val);
                         } else {
                             craftCount = 0;
