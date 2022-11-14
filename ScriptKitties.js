@@ -768,11 +768,14 @@ SK.Tasks = class {
 
     // Collection of Minor Auto Tasks
     autoMinor(ticksPerCycle) {
+        let override = false;
         if (this.model.minor.feed) {
-            if (game.resPool.get('necrocorn').value >= 1 && game.diplomacy.get('leviathans').unlocked) {
+            const ncorns = game.resPool.get('necrocorn').value;
+            if (ncorns >= 1 && game.diplomacy.get('leviathans').unlocked) {
                 const energy = game.diplomacy.get('leviathans').energy || 0;
                 if (energy < game.diplomacy.getMarkerCap()) {
-                    game.diplomacy.feedElders();
+                    game.diplomacy.feedElders(ncorns);
+                    override = true;
                 }
             }
         }
@@ -794,6 +797,7 @@ SK.Tasks = class {
                 }
             }
         }
+        return override;
     }
 
     // Hunt automatically
