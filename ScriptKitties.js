@@ -712,7 +712,7 @@ SK.Tasks = class {
                 const inputs = res.prices;
                 const outRes = game.resPool.get(output);
                 if (! res.unlocked) continue;
-                if (outRes.type != 'common') continue; // mostly to prevent relic+tc->bloodstone
+                if (outRes.type !== 'common') continue; // mostly to prevent relic+tc->bloodstone
 
                 let craftCount = Infinity;
                 let minimumReserve = Infinity;
@@ -722,12 +722,12 @@ SK.Tasks = class {
                     const inVal = inRes.value / input.val;
                     craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
 
-                    if (this.model.books.includes(output) && this.model.option.book != 'default') {
+                    if (this.model.books.includes(output) && this.model.option.book !== 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
                         const outputIndex = this.model.books.indexOf(output);
                         const choiceIndex = this.model.books.indexOf(this.model.option.book);
                         if (outputIndex > choiceIndex) craftCount = 0;
-                    } else if (inRes.maxValue != 0) {
+                    } else if (inRes.maxValue !== 0) {
                         // primary resource
                         const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
                         const surplus = inRes.value + resourcePerCycle - inRes.maxValue;
@@ -1368,7 +1368,7 @@ SK.Tasks = class {
                 // adjust to end in the right cycle
                 const cyclename = this.model.option.cycle;
                 const cycle = game.calendar.cycles.findIndex((c) => c.name === cyclename);
-                if (this.model.auto.cycle && game.calendar.cycle != cycle) {
+                if (this.model.auto.cycle && game.calendar.cycle !== cycle) {
                     // desired cycle: sk.model.option.cycle
                     // current cycle: game.calendar.cycle
                     // year in cycle: game.calendar.cycleYear
@@ -1378,7 +1378,7 @@ SK.Tasks = class {
                 }
 
                 // click the button
-                if (shatter != 0 && shatter < game.resPool.get('timeCrystal').value) {
+                if (shatter !== 0 && shatter < game.resPool.get('timeCrystal').value) {
                     timeslip = this.autoDoShatter(shatter);
                 }
             }
@@ -1675,7 +1675,7 @@ SK.Scripts = class {
         }
 
         // cleanup
-        if (action != 'init') { // init is allowed to change tab
+        if (action !== 'init') { // init is allowed to change tab
             game.ui.confirm = oldConfirm;
         }
 
@@ -1694,7 +1694,7 @@ SK.Scripts = class {
 
     massBuild(buttons, building, count) {
         for (var button of buttons) {
-            if (button.model?.metadata?.name != building) continue;
+            if (button.model?.metadata?.name !== building) continue;
             let remaining = count - button.model.on;
             if (remaining <= 0) return true; // we've already got enough
             if (! button.model.enabled) button.controller.updateEnabled(button.model);
@@ -1775,7 +1775,7 @@ SK.Scripts = class {
 
     isCapped(buttons, target) {
         for (const button of buttons) {
-            if (button.model.metadata?.name != target) continue;
+            if (button.model.metadata?.name !== target) continue;
             return button.model.resourceIsLimited === true;
         }
         return false; // if we can't find it, we haven't even begun to build it
@@ -2061,7 +2061,7 @@ SK.Scripts = class {
                 return false;
 
             case 'steamworks': // -|
-                if (game.bld.get('steamworks').val != 0) {
+                if (game.bld.get('steamworks').val !== 0) {
                     game.bld.get('steamworks').on = game.bld.get('steamworks').val;
                     game.bld.get('steamworks').isAutomationEnabled = false;
                     return true;
@@ -2325,7 +2325,7 @@ SK.Scripts = class {
                 return false;
 
             case 'steamworks': // -|
-                if (game.bld.get('steamworks').val != 0) {
+                if (game.bld.get('steamworks').val !== 0) {
                     game.bld.get('steamworks').on = game.bld.get('steamworks').val;
                     game.bld.get('steamworks').isAutomationEnabled = false;
                     return true;
@@ -2381,7 +2381,7 @@ SK.Scripts = class {
                     && game.workshop.get('fluxCondensator').researched) {
                     // disable auto tech,
                     for (const auto in this.model.auto) {
-                        if (auto != 'play') this.model.auto[auto] = false;
+                        if (auto !== 'play') this.model.auto[auto] = false;
                         game.time.isAccelerated = false;
                     }
                     this.state.push('endgame-stockpile');
