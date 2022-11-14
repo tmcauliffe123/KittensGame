@@ -721,12 +721,18 @@ SK.Tasks = class {
                     const outVal = outRes.value / (1 + game.getCraftRatio(outRes.tag));
                     const inVal = inRes.value / input.val;
                     craftCount = Math.min(craftCount, Math.floor(inVal)); // never try to use more than we have
+                    // for when our capacity gets large compared to production
+                    minimumReserve = Math.min(minimumReserve, inVal * (this.model.option.minSecResRatio / 100) - outVal);
 
                     if (this.model.books.includes(output) && this.model.option.book !== 'default') {
                         // secondary resource: fur, parchment, manuscript, compendium
                         const outputIndex = this.model.books.indexOf(output);
                         const choiceIndex = this.model.books.indexOf(this.model.option.book);
-                        if (outputIndex > choiceIndex) craftCount = 0;
+                        if (outputIndex > choiceIndex) {
+                            craftCount = 0;
+                            minimumReserve = 0;
+                            break;
+                        }
                     } else if (inRes.maxValue !== 0) {
                         // primary resource
                         const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
@@ -745,8 +751,6 @@ SK.Tasks = class {
                             craftCount = Math.min(craftCount, targetValue - outVal);
                         }
                     }
-                    // for when our capacity gets large compared to production
-                    minimumReserve = Math.min(minimumReserve, inVal * (this.model.option.minSecResRatio / 100) - outVal);
                 }
 
                 craftCount = Math.max(craftCount, minimumReserve);
