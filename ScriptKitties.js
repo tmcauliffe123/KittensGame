@@ -9,7 +9,7 @@ var SK = class {
     }
 
     bldTabChildren() {
-        var children = game.bldTab.children;
+        let children = game.bldTab.children;
         if (children.length === 0) children = game.bldTab.buttons;
         return children;
     }
@@ -658,7 +658,7 @@ SK.Tasks = class {
 
     // Auto praise the sun
     autoPraise(ticksPerCycle) {
-        if (this.model.auto.praise && game.resPool.get("faith") > 0) {
+        if (this.model.auto.praise && game.resPool.get("faith").value > 0) {
             game.religion.praise();
         }
     }
@@ -879,7 +879,7 @@ SK.Tasks = class {
             this.ensureContentExists('Religion');
             this.ensureContentExists('Time');
 
-            // TODO: special case for Markers and Tears
+            // TODO: special case for Markers and Tears -- exists in autoUnicorn
             const tb = this.model.timeBuildings;
             for (const buttons of buttonGroups) {
                 if (buttons) {
