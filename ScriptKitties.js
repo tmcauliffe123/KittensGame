@@ -802,10 +802,13 @@ SK.Tasks = class {
 
     // Hunt automatically
     autoHunt(ticksPerCycle) {
-        if (this.model.auto.hunt) {
+        if (this.model.auto.hunt && game.ui.fastHuntContainer.style.display === 'block') {
             const catpower = game.resPool.get('manpower');
-            if (game.ui.fastHuntContainer.style.display === 'block'
-                && catpower.value > (catpower.maxValue - 1)) {
+            const furs = game.resPool.get('furs');
+            const hunterRatio = game.getEffect("hunterRatio") + game.village.getEffectLeader("manager", 0);
+            const expectedFurs = (catpower.value / 100) * (40 + 32.5 * hunterRatio);
+
+            if (catpower.value > (catpower.maxValue - 1) || expectedFurs > furs.value * 10) {
                 game.village.huntAll();
             }
         }
