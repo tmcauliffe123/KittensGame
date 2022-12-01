@@ -578,6 +578,9 @@ SK.Tasks = class {
 
         let doRender = false;
         switch (tabId) {
+            case 'Village':
+                doRender = (! tab.festivalBtn || ! tab.huntBtn);
+                break;
             case 'Science':
                 doRender = (tab.buttons.length === 0 || ! tab.policyPanel);
                 break;
@@ -913,10 +916,12 @@ SK.Tasks = class {
             const parchment = game.resPool.get('parchment').value;
 
             if (catpower >= 1500 && culture >= 5000 && parchment >= 2500) {
-                if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays <= 400*(this.model.minor.partyLimit - 1)) {
-                    game.village.holdFestival(1);
-                } else if (game.calendar.festivalDays === 0) {
-                    game.village.holdFestival(1);
+                if (game.prestige.getPerk('carnivals').researched && game.calendar.festivalDays <= 400 * (this.model.minor.partyLimit - 1)
+                    || game.calendar.festivalDays === 0
+                ) {
+                    this.ensureContentExists('Village');
+                    const button = game.villageTab.festivalBtn;
+                    button.controller.buyItem(button.model, {}, function(result) {});
                 }
             }
         }
