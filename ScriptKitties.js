@@ -6,6 +6,7 @@ var SK = class {
         this.tasks = new SK.Tasks(this.model, this.scripts);
         this.gui = new SK.Gui(this.model, this.tasks);
         this.loadOptions();
+        console.log("ScriptKittens loaded.");
     }
 
     bldTabChildren() {
@@ -643,6 +644,21 @@ SK.Tasks = class {
         }
     }
 
+    buyItem(button, event={}) {
+        // It is important to know that the callback is normally called
+        // immediately, but there is no guarantee. I'm not really sure how it
+        // plays out if it is delayed. However, it's fine if this function
+        // sometimes returns false when it should have returned true.
+        let success = false;
+        button.controller.buyItem(button.model, event, function(result) {
+            if (result) {
+                success = true;
+                button.update();
+            }
+        });
+        return success;
+    }
+
     /*** Individual Auto Scripts start here ***/
     /*** These scripts run every tick ***/
 
@@ -676,11 +692,7 @@ SK.Tasks = class {
                 const name = button.model.metadata.name;
                 if (button.model.enabled && cb[name].enabled
                         && (!cb[name].limit || button.model.metadata.val < cb[name].limit)) {
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {
-                            built = true; button.update();
-                        }
-                    });
+                    if (this.buyItem(button)) built = true;
                 }
             }
         }
@@ -835,11 +847,7 @@ SK.Tasks = class {
                         // .enabled doesn't update automatically unless the tab is active, force it
                         if (! spBuild.model.enabled) spBuild.controller.updateEnabled(spBuild.model);
                         if (spBuild.model.enabled) {
-                            spBuild.controller.buyItem(spBuild.model, {}, function(result) {
-                                if (result) {
-                                    built = true; spBuild.update();
-                                }
-                            });
+                            if (this.buyItem(spBuild)) built = true;
                         }
                     }
                 }
@@ -859,11 +867,7 @@ SK.Tasks = class {
                     // normal path
                     if (! program.model.enabled) program.controller.updateEnabled(program.model);
                     if (program.model.enabled) {
-                        program.controller.buyItem(program.model, {}, function(result) {
-                            if (result) {
-                                built = true; program.update();
-                            }
-                        });
+                        if (this.buyItem(program)) built = true;
                     }
                 }
             }
@@ -894,11 +898,7 @@ SK.Tasks = class {
                                 && (!tb[button.id].limit || button.model.metadata.val < tb[button.id].limit)) {
                             if (! button.model.enabled) button.controller.updateEnabled(button.model);
                             if (button.model.enabled) {
-                                button.controller.buyItem(button.model, {}, function(result) {
-                                    if (result) {
-                                        built = true; button.update();
-                                    }
-                                });
+                                if (this.buyItem(button)) built = true;
                             }
                         }
                     }
@@ -920,8 +920,7 @@ SK.Tasks = class {
                     || game.calendar.festivalDays === 0
                 ) {
                     this.ensureContentExists('Village');
-                    const button = game.villageTab.festivalBtn;
-                    button.controller.buyItem(button.model, {}, function(result) {});
+                    this.buyItem(game.villageTab.festivalBtn);
                 }
             }
         }
@@ -1254,20 +1253,19 @@ SK.Tasks = class {
             }
         }
         if (bestButton) {
-            bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                if (result) {
-                    acted = true; bestButton.update();
-                } else {
-                    console.log(`Failed to build ${bestButton.model.metadata.name}`);
-                }
-            });
+            if (this.buyItem(bestButton)) {
+                acted = true;
+            } else {
+                // this shouldn't happen, investigate if you see it
+                console.log(`Failed to build ${bestButton.model.metadata.name}`);
+            }
         }
         return acted;
     }
 
     // Auto buy religion upgrades
     autoReligion(ticksPerCycle) {
-        let bought = false;
+        let built = false;
         let futureBuy = false;
         if (this.model.auto.religion && game.religionTab.visible) {
             this.ensureContentExists('Religion');
@@ -1275,11 +1273,7 @@ SK.Tasks = class {
             for (const button of game.religionTab.rUpgradeButtons) {
                 if (! button.model.enabled) button.update();
                 if (button.model.enabled) {
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {
-                            bought = true; button.update();
-                        }
-                    });
+                    if (this.buyItem(button)) built = true;
                 }
                 // only things with a priceRatio cap, check if they have
                 futureBuy ||= (button.model.metadata.priceRatio && ! button.model.resourceIsLimited);
@@ -1288,7 +1282,7 @@ SK.Tasks = class {
                 sk.gui.autoSwitch('praise', 'SK_autoPraise');
             }
         }
-        return bought;
+        return built;
     }
 
     // Trade automatically
@@ -1357,8 +1351,8 @@ SK.Tasks = class {
         this.autoHunt(shatterTCGain * ticksPassing);
 
         // do shatter
-        const btn = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
-        btn.controller.doShatterAmt(btn.model, years);
+        const button = game.timeTab.cfPanel.children[0].children[0]; // no idea why there's two layers in the code
+        button.controller.doShatterAmt(button.model, years);
         return timeslip;
     }
 
@@ -1410,18 +1404,14 @@ SK.Tasks = class {
             const culture = game.resPool.get('culture');
             if (culture.value >= culture.maxValue * 0.99) { // will often exceed due to MS fluctuations
                 const panels = game.diplomacyTab.racePanels;
-                let btn = panels[0].embassyButton;
+                let button = panels[0].embassyButton;
                 for (let z = 1; z < panels.length; z++) {
                     const candidate = panels[z].embassyButton;
-                    if (candidate && candidate.model.prices[0].val < btn.model.prices[0].val) {
-                        btn = candidate;
+                    if (candidate && candidate.model.prices[0].val < button.model.prices[0].val) {
+                        button = candidate;
                     }
                 }
-                btn.controller.buyItem(btn.model, {}, function(result) {
-                    if (result) {
-                        built = true; btn.update();
-                    }
-                });
+                if (this.buyItem(button)) built = true;
             }
         }
         return built;
@@ -1463,12 +1453,8 @@ SK.Tasks = class {
                 }
                 if (available) {
                     const button = game.diplomacyTab.exploreBtn;
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {
-                            available = true;
-                            game.diplomacyTab.render($('div.tabInner.Trade')[0]); // create race panel
-                        }
-                    });
+                    if (! button.model.enabled) button.controller.updateEnabled(button.model);
+                    this.buyItem(button);
                 }
             }
             return available;
@@ -1534,11 +1520,7 @@ SK.Tasks = class {
                     const sufficient = this.sacForTears(tearCost);
                     if (sufficient) {
                         if ( ! bestButton.model.enabled) bestButton.update();
-                        bestButton.controller.buyItem(bestButton.model, {}, function(result) {
-                            if (result) {
-                                acted = true; bestButton.update();
-                            }
-                        });
+                        if (this.buyItem(bestButton)) acted = true;
                     }
                 }
             }
@@ -1620,9 +1602,7 @@ SK.Tasks = class {
         if (button.model) {
             const amount = all ? {'shiftKey': true} : {};
             if (! button.model.enabled) button.controller.updateEnabled(button.model);
-            button.controller.buyItem(button.model, amount, function(result) {
-                if (result) button.update();
-            });
+            this.buyItem(button);
         }
     }
 
@@ -1736,9 +1716,7 @@ SK.Scripts = class {
                 if (! button.model.enabled) button.controller.updateEnabled(button.model);
                 if (! button.model.visible) button.controller.updateVisible(button.model);
                 if (button.model.enabled && button.model.visible) {
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) button.update();
-                    });
+                    sk.tasks.buyItem(button);
                 }
                 if (metadata.researched || metadata.on) {
                     count += 1;
@@ -1865,13 +1843,7 @@ SK.Scripts = class {
 
         // Adore, user can Transcend manually
         button = game.religionTab.adoreBtn;
-        if (button) {
-            button.controller.buyItem(button.model, {}, function(result) {
-                if (result) {
-                    button.update();
-                }
-            });
-        }
+        if (button) sk.tasks.buyItem(button);
 
         // sell a bunch of buildings, reset.
         const sellAll = {'shiftKey': true};
@@ -2106,14 +2078,7 @@ SK.Scripts = class {
             case 'trade-zebras': // -> trade-on
                 var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name==='zebras');
                 if (!zebraPanel) return false;
-                var button = zebraPanel.embassyButton;
-                while (button.model.enabled) {
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {
-                            button.update();
-                        }
-                    });
-                }
+                sk.tasks.buyItem(zebraPanel.embassyButton, {shiftKey:true});
                 this.model.auto.embassy = true;
                 this.state.push('trade-on');
                 return true;
@@ -2362,14 +2327,7 @@ SK.Scripts = class {
             case 'trade-zebras': // -|
                 var zebraPanel = game.diplomacyTab?.racePanels?.find((panel) => panel.race.name==='zebras');
                 if (!zebraPanel) return false;
-                var button = zebraPanel.embassyButton;
-                while (button.model.enabled) {
-                    button.controller.buyItem(button.model, {}, function(result) {
-                        if (result) {
-                            button.update();
-                        }
-                    });
-                }
+                sk.tasks.buyItem(zebraPanel.embassyButton, {shiftKey:true});
                 this.model.auto.embassy = true;
                 this.model.auto.trade = true;
                 return true;
@@ -2730,15 +2688,13 @@ SK.Scripts = class {
             // Phase 1. Explore
             if (! lizards.unlocked) {
                 const button = game.diplomacyTab.exploreBtn;
-                if (button) {
-                    for (let i=0; i<5; i++) {
-                        button.controller.buyItem(button.model, {}, function(result) {
-                            if (result) game.diplomacyTab.render($('div.tabInner.Trade')[0]);
-                        });
-                    }
-                } else {
+                if (! button) {
                     console.log('Could not find explore button.');
                     return false;
+                }
+                if (! button.model.enabled) button.controller.updateEnabled(button.model);
+                for (let i=0; i<5; i++) {
+                    this.buyItem(button);
                 }
             }
 
@@ -2867,8 +2823,8 @@ SK.Scripts = class {
             case 'fix-loop': // -> end-start
                 // this.model.auto.flux = true;
                 sk.tasks.fixCryochamber(true);
-                const btn = game.timeTab.cfPanel.children[0].children[0];
-                btn.controller.doShatterAmt(btn.model, 500);
+                const button = game.timeTab.cfPanel.children[0].children[0];
+                button.controller.doShatterAmt(button.model, 500);
                 if (game.time.getVSU('usedCryochambers').on === 0
                         || game.time.getVSU('cryochambers').val >= maxCryo) {
                     this.turbo = false;
