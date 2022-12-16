@@ -1303,48 +1303,72 @@ SK.Tasks = class {
     }
 
     // Trade automatically
-    autoTrade(ticksPerCycle) {
+    autoTrade(ticksPerCycle, consecutive) {
         let traded = false;
         if (this.model.auto.trade && game.diplomacyTab.visible) {
             const goldResource = game.resPool.get('gold');
             const goldPerCycle = game.getResourcePerTick('gold') * ticksPerCycle;
+            const goldCost = game.diplomacy.getGoldCost();
             const powerResource = game.resPool.get('manpower');
-            let powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
-            powerPerCycle = Math.min(powerPerCycle, powerResource.value); // don't try to spend more than we have
-            let sellCount = Math.floor(Math.min(goldPerCycle/15, powerPerCycle/50));
+            const powerPerCycle = game.getResourcePerTick('manpower') * ticksPerCycle;
+            const powerCost = game.diplomacy.getManpowerCost();
 
-            // TODO: capping gold can take too long, use SRS to compensate
-            // fuck that noise. Write a proper autoTrade, with per civ toggles in the Options menu
-            let maxTrades = 0;
-            if (goldResource.value > (goldResource.maxValue - goldPerCycle)) { // don't check catpower
-                maxTrades = goldResource.value / 15;
-            } else {
-                maxTrades = goldPerCycle * this.model.option.minSecResRatio / 100 / 15; // consume up to mSRR% of production
-            }
-            if (maxTrades > 0) {
-                const tiRes = game.resPool.get('titanium');
-                const unoRes = game.resPool.get('unobtainium');
+            let tradeLimit = 10000; // upper bound
+            if (goldCost) tradeLimit = Math.min(tradeLimit, goldPerCycle, goldResource.value / goldCost);
+            if (powerCost) tradeLimit = Math.min(tradeLimit, powerPerCycle, powerResource.value / powerCost);
 
-                if (unoRes.value > 5000 && game.diplomacy.get('leviathans').unlocked && this.model.minor.elderTrade) {
-                    game.diplomacy.tradeAll(game.diplomacy.get('leviathans'));
-                    traded = true;
-                } else if (tiRes.value < (tiRes.maxValue * 0.9) && game.diplomacy.get('zebras').unlocked) {
-                    // don't waste the iron, make some space for it.
-                    const ironRes = game.resPool.get('iron');
-                    const sellIron = game.diplomacy.get('zebras').sells[0];
-                    const expectedIron = sellIron.value * sellCount *
-                        (1 + (sellIron.seasons ? sellIron.seasons[game.calendar.getCurSeason().name] : 0)) *
-                        (1 + game.diplomacy.getTradeRatio() + game.diplomacy.calculateTradeBonusFromPolicies('zebras', game));
-                    if (ironRes.value > (ironRes.maxValue - expectedIron)) {
-                        game.craft('plate', (ironRes.value - (ironRes.maxValue - expectedIron))/125); // 125 is iron per plate
+            // Always Trade with the Elders enabled, trade max with them if possible
+            if (tradeLimit > 0 && this.model.minor.elderTrade) {
+                const leviathans = game.diplomacy.get('leviathans');
+                if (leviathans.unlocked) {
+                    const unoRes = game.resPool.get('unobtainium');
+                    const leviTradeCost = leviathans.buys.find((b) => b.name === 'unobtainium').val;
+                    const unoPreValue = unoRes.value;
+                    if (unoPreValue > leviTradeCost) {
+                        game.diplomacy.tradeAll(leviathans);
+                        tradeLimit = Math.floor(tradeLimit - (unoPreValue - unoRes.value) / leviTradeCost);
+                        traded = true;
                     }
+                }
+            }
 
-                    // don't overdo it
-                    const deltaTi = tiRes.maxValue - tiRes.value;
-                    const expectedTi = game.resPool.get('ship').value * 0.03;
-                    sellCount = Math.ceil(Math.min(maxTrades, sellCount, deltaTi / expectedTi));
-                    game.diplomacy.tradeMultiple(game.diplomacy.get('zebras'), sellCount);
-                    traded = false; // don't back-to-back zebra trade
+            // Everyone else, we're looking to spend 20% to make 50%
+            // We don't do normal autoTrades on consecutive runs, that's just for the Elders
+            const spend = 0.20;
+            const gains = 0.50;
+            if (tradeLimit > 0 && ! consecutive) {
+                let best = {race:null, ratio:gains};
+                for (const race of game.diplomacy.races) {
+                    if (! race.unlocked) continue;
+                    if (this.model.minor.elderTrade && race.name === 'leviathans') continue; // already done
+                    // TODO: trade limit could distort the calculation below,
+                    // we should calculate the best trade on a strict 20% for
+                    // 50% basis, and then limit it down to the gold/catpower
+                    // limit above afterward, when we are decided how many to
+                    // send.
+                    const trades = Math.min(Math.ceil(game.diplomacy.getMaxTradeAmt(race) * spend), tradeLimit);
+                    if (! trades || trades <= 1) continue; // no single trades
+
+                    const duration = race.duration; // preserve against tradeImpl side effects
+                    const expectedResources = game.diplomacy.tradeImpl(race, trades);
+                    race.duration = duration;
+                    for (const resName in expectedResources) {
+                        const res = game.resPool.get(resName);
+                        const ratio = Math.min(expectedResources[resName], res.maxValue - res.value) / res.value;
+                        if (ratio > best.ratio) {
+                            best = {race:race, ratio:ratio, trades:trades, res:expectedResources};
+                        }
+                    }
+                }
+                if (best.race) {
+                    // console.log(`We should trade ${best.trades} times with ${best.race.name} for ratio: ${best.ratio} on ${best.res}`);
+                    for (const resName in best.res) {
+                        const res = game.resPool.get(resName);
+                        const excess = res.value + best.res[resName] - res.maxValue;
+                        if (res.maxValue && excess > 0) this.makeSpace(res, excess);
+                    }
+                    game.diplomacy.tradeMultiple(best.race, best.trades);
+                    // traded = unchanged; // we trade based on PerCycle values, don't multi-trade.
                 }
             }
         }
