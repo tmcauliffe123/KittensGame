@@ -659,6 +659,22 @@ SK.Tasks = class {
         return success;
     }
 
+    makeSpace(resource, amount) {
+        // Something is going to produce ``amount`` of ``resource``, and
+        // wants it to not go to waste.
+        for (const craft of game.workshop.crafts) {
+            const price = craft.prices.find((p) => p.name === resource.name);
+            if (! price) continue;
+            const craftCount = Math.ceil(amount / price.val); // workshops don't reduce prices...
+
+            console.log(`pre-trade crafting away ${amount} ${resource.name} into ${craft.name}`); // XXX remove
+            // over-specify here to prevent infinite loops. Address in the unlikely case it ever matters
+            if (resource.name=='catnip' && craft.name=='wood') this.makeSpace('wood', craftCount);
+            game.craft(craft.name, craftCount);
+            break;
+        }
+    }
+
     /*** Individual Auto Scripts start here ***/
     /*** These scripts run every tick ***/
 
@@ -748,7 +764,7 @@ SK.Tasks = class {
                             minimumReserve = 0;
                             break;
                         }
-                    } else if (inRes.maxValue !== 0) {
+                    } else if (inRes.maxValue) {
                         // primary resource
                         const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
                         const surplus = inRes.value + resourcePerCycle - inRes.maxValue;
@@ -774,6 +790,7 @@ SK.Tasks = class {
                 } else if (this.model.option.book === 'blueprint' && output === 'compedium' && game.resPool.get('compedium').value > 25) {
                     // save science for making blueprints
                 } else {
+                    if (res.maxValue) this.makeSpace(res, craftCount);
                     game.craft(output, craftCount);
                 }
             }
