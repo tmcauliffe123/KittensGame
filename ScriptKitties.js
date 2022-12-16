@@ -99,7 +99,7 @@ SK.Model = class {
             praiseAfter: 'Praise After Religion',
             unicornIvory: 'Unicorn Ivory Optimization',
             conserveExotic: 'Conserve Exotic Resources',
-            elderTrade: 'Auto Trade with the Elders',
+            elderTrade: 'Always Trade with the Elders',
             autoFixCC: 'Auto use Flux to fix Cryo Chambers',
             permitReset: 'Permit Auto Play to Reset',
         };
@@ -822,9 +822,11 @@ SK.Tasks = class {
                 const goldToPromote = 25 * (leader.rank + 1);
                 if (leader.exp >= expToPromote && game.resPool.get('gold').value >= goldToPromote) {
                     if (game.village.sim.promote(leader) > 0) {
-                        const census = game.villageTab.censusPanel.census;
-                        census.renderGovernment(census.container);
-                        census.update();
+                        const census = game.villageTab.censusPanel?.census;
+                        if (census) {
+                            census.renderGovernment(census.container);
+                            census.update();
+                        }
                     }
                 }
             }
@@ -972,6 +974,11 @@ SK.Tasks = class {
             // X. Containment chambers
             // Y. Space Stations -- note, never auto enable space stations
             // ---
+
+            // Xenosage's recommendations
+            // 1. Trim Energy Containment to either zero, or what's necessary to allow AM growth
+            // 2. make sure biolabs only turn off if they're consuming power
+            // 3. turn off many buildings per tick
             if (this.model.power.accelerator.val > this.model.power.accelerator.on && proVar > (conVar + 3)) {
                 this.model.power.accelerator.on++;
                 conVar++;
@@ -1249,8 +1256,7 @@ SK.Tasks = class {
     autoTechHelper(buttons, skipUpdate) {
         let acted = false;
         const science = game.resPool.get('science').value;
-        let bestButton = null;
-        let bestCost = Infinity;
+        let best = {button:null, cost:Infinity};
         techloop: for (const button of buttons) {
             if (button.model.metadata.researched || ! button.model.metadata.unlocked) continue;
             let cost = 0;
@@ -1261,20 +1267,19 @@ SK.Tasks = class {
                     continue techloop;
                 }
             }
-            if (cost < science && cost < bestCost) {
+            if (cost < science && cost < best.cost) {
                 if (! skipUpdate && ! button.model.enabled) button.controller.updateEnabled(button.model);
                 if (button.model.enabled) {
-                    bestButton = button;
-                    bestCost = cost;
+                    best = {button:button, cost:cost};
                 }
             }
         }
-        if (bestButton) {
-            if (this.buyItem(bestButton)) {
+        if (best.button) {
+            if (this.buyItem(best.button)) {
                 acted = true;
             } else {
                 // this shouldn't happen, investigate if you see it
-                console.log(`Failed to build ${bestButton.model.metadata.name}`);
+                console.log(`Failed to build ${best.button.model.metadata.name}`);
             }
         }
         return acted;
@@ -1454,7 +1459,7 @@ SK.Tasks = class {
                     best = {button:button, price:price};
                 }
             }
-            // max culture will often be slightly less than max due to MS fluctuations
+            // max culture will often be slightly less than max due to manuscript fluctuations
             if (culture.value >= culture.maxValue * 0.99 || best.price < culturePerCycle) {
                 // This hack HURTS... For some godforsaken reason, EmbassyButtonController.buyItem invokes
                 // a full this.game.ui.render; which is slow as molasses. At least 50ms. We can't afford
@@ -1502,7 +1507,7 @@ SK.Tasks = class {
                         case 'leviathans':
                             break;
                         default:
-                            console.log(`WARNING: unrecognized race: ${race.name} in minor/Explore`);
+                            console.log(`WARNING: unrecognized race: ${race.name} in autoExplore`);
                     }
                     if (available) break;
                 }
@@ -1535,29 +1540,35 @@ SK.Tasks = class {
             const ivoryPerMeteor = 250 + 749.5 * (1 + game.getEffect('ivoryMeteorRatio'));
 
             // find which is the best value
-            let bestButton = null;
-            let bestValue = 0.0;
+            let bestTears = {button:null, value:0};
+            let bestIvory = {button:null, value:0};
             for (const button of game.religionTab.zgUpgradeButtons) {
                 if (button.model.metadata.unlocked) {
-                    let value = 0;
-                    if (! this.model.minor.unicornIvory) {
-                        const tearCost = button.model.prices.find((element) => element.name==='tears');
-                        if (! tearCost) continue;
+                    const tearCost = button.model.prices.find((element) => element.name === 'tears');
+                    if (tearCost) {
                         const ratio = button.model.metadata.effects.unicornsRatioReligion;
                         const rifts = button.model.metadata.effects.riftChance || 0;
-                        value = (ratio * ups + rifts * upsprc) / tearCost.val;
-                    } else {
-                        const ivoryCost = button.model.prices.find((element) => element.name==='ivory');
-                        if (! ivoryCost) continue;
+                        const tearValue = (ratio * ups + rifts * upsprc) / tearCost.val;
+                        if (tearValue > bestTears.value) {
+                            bestTears = {button:button, value:tearValue};
+                        }
+                    }
+
+                    const ivoryCost = button.model.prices.find((element) => element.name === 'ivory');
+                    if (ivoryCost) {
                         const ratio = button.model.metadata.effects.ivoryMeteorRatio || 0;
                         const chance = button.model.metadata.effects.ivoryMeteorChance || 0;
-                        value = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
-                    }
-                    if (value > bestValue) {
-                        bestButton = button;
-                        bestValue = value;
+                        const ivoryValue = (meteorChance * ratio * 749.5 + chance * unicornChanceRatio/2 * ivoryPerMeteor) / ivoryCost.val;
+                        if (ivoryValue > bestIvory.value) {
+                            bestIvory = {button:button, value:ivoryValue};
+                        }
                     }
                 }
+            }
+
+            let bestButton = bestTears.button; // default to tear-optimization if we can't improve via ivory
+            if (this.model.minor.unicornIvory && bestIvory.value > 0) {
+                bestButton = bestIvory.button;
             }
 
             // can we afford it?
@@ -1574,7 +1585,7 @@ SK.Tasks = class {
                 if (otherCosts) {
                     const sufficient = this.sacForTears(tearCost);
                     if (sufficient) {
-                        if ( ! bestButton.model.enabled) bestButton.update();
+                        if (! bestButton.model.enabled) bestButton.update();
                         if (this.buyItem(bestButton)) acted = true;
                     }
                 }
