@@ -1398,20 +1398,34 @@ SK.Tasks = class {
 
     // Build Embassies automatically
     autoEmbassy(ticksPerCycle) {
-        // TODO: something in this function is damaging responsiveness
         let built = false;
         if (this.model.auto.embassy && game.science.get('writing').researched && game.diplomacyTab.racePanels && game.diplomacyTab.racePanels[0]) {
+            this.ensureContentExists('Trade');
             const culture = game.resPool.get('culture');
-            if (culture.value >= culture.maxValue * 0.99) { // will often exceed due to MS fluctuations
-                const panels = game.diplomacyTab.racePanels;
-                let button = panels[0].embassyButton;
-                for (let z = 1; z < panels.length; z++) {
-                    const candidate = panels[z].embassyButton;
-                    if (candidate && candidate.model.prices[0].val < button.model.prices[0].val) {
-                        button = candidate;
-                    }
+            const culturePerCycle = culture.perTickCached * ticksPerCycle;
+
+            let best = {button:null, price:Infinity};
+            for (const panel of game.diplomacyTab.racePanels) {
+                const button = panel.embassyButton;
+                if (! button) continue;
+                const price = button.model.prices[0].val;
+                if (price < best.price) {
+                    best = {button:button, price:price};
                 }
-                if (this.buyItem(button)) built = true;
+            }
+            // max culture will often be slightly less than max due to MS fluctuations
+            if (culture.value >= culture.maxValue * 0.99 || best.price < culturePerCycle) {
+                // This hack HURTS... For some godforsaken reason, EmbassyButtonController.buyItem invokes
+                // a full this.game.ui.render; which is slow as molasses. At least 50ms. We can't afford
+                // that, so we bypass it.
+                const embassyController = new classes.diplomacy.ui.EmbassyButtonController(game);
+                embassyController.buyItem = com.nuclearunicorn.game.ui.BuildingStackableBtnController.prototype.buyItem ;
+                embassyController.buyItem(best.button.model, {}, function(result) {
+                    if (result) {
+                        built = true;
+                        best.button.update();
+                    }
+                });
             }
         }
         return built;
