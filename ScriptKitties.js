@@ -732,11 +732,13 @@ SK.Tasks = class {
          * On the other hand, we don't want to always round down, or else we'll be
          * wasting resources, and in some cases *cough*eludium*cough*, we'll be
          * rounding down to zero.
+         *
+         * Note: There are problems with some crafts starving later crafts.
+         * This is fine for things that use SRS, because percentages, but for
+         * plates and steel it's a problem. To avoid that we treat "iron" special.
          */
 
-        // TODO: We need a special case for catnip->wood.
-        // In particular, we need to only craft wood if there's room
-        // AND we need to make room by crafting
+        let ironCache = null;
         if (this.model.auto.craft && game.workshopTab.visible) {
             for (const res of game.workshop.crafts) {
                 const output = res.name;
@@ -767,8 +769,12 @@ SK.Tasks = class {
                     } else if (inRes.maxValue) {
                         // primary resource
                         const resourcePerCycle = game.getResourcePerTick(input.name, 0) * ticksPerCycle;
-                        const surplus = inRes.value + resourcePerCycle - inRes.maxValue;
-                        if (0 < surplus && surplus < resourcePerCycle) {
+                        let surplus = inRes.value + resourcePerCycle - inRes.maxValue;
+                        if (inRes.name === "iron") {
+                            if (ironCache === null) ironCache = surplus;
+                            else surplus = ironCache;
+                        }
+                        if (0 < surplus && surplus < resourcePerCycle * 2) {
                             craftCount = Math.min(craftCount, surplus / input.val);
                         } else {
                             craftCount = 0;
