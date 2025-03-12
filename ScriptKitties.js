@@ -2313,10 +2313,7 @@ SK.Scripts = class {
                         case 'chronosphere':
                             limit = 5;
                             break;
-                        case ' ziggurat':
-                            limit = 1;
-                            break;
-                        case 'biolab': case 'mint': case 'aiCore':
+                        case 'biolab': case 'mint': case 'ziggurat': case 'aiCore':
                         case 'zebraForge': case 'zebraOutpost': case 'zebraWorkshop':
                             continue; // don't enable
                     }
