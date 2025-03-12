@@ -2281,11 +2281,14 @@ SK.Scripts = class {
                 this.model.auto.explore = true;
                 this.model.auto.hunt = true;
                 this.model.auto.party = true;
+                this.model.auto.trade = true;
+                this.mmodel.auto.embassy = true;
+                this.model.auto.craft = true;
                 this.model.auto.research = true;
                 this.model.auto.unicorn = true;
                 this.model.auto.workshop = true;
                 this.model.option.minSecResRatio = 10; // more alloy
-                this.model.minor.program = 1000; // starchart<=1000: orbit,moon,dune,piscine
+                this.model.minor.program = 2000; // starchart<=1000: orbit,moon,dune,piscine
                 this.model.minor.feed = true;
                 this.model.minor.promote = true;
                 this.model.minor.praiseAfter = true;
@@ -2310,7 +2313,10 @@ SK.Scripts = class {
                         case 'chronosphere':
                             limit = 5;
                             break;
-                        case 'biolab': case 'mint': case 'ziggurat': case 'aiCore':
+                        case ' ziggurat':
+                            limit = 1;
+                            break;
+                        case 'biolab': case 'mint': case 'aiCore':
                         case 'zebraForge': case 'zebraOutpost': case 'zebraWorkshop':
                             continue; // don't enable
                     }
@@ -2319,7 +2325,7 @@ SK.Scripts = class {
                 }
                 /** space **/
                 var slimit = {
-                    spaceElevator: 5, sattelite: false, moonOutpost: false,
+                    spaceElevator: 10, sattelite: false, moonOutpost: false,
                     hydrofracturer: 10, spiceRefinery: 10,
                     researchVessel: 40,
                 };
