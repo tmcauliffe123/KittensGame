@@ -11,7 +11,7 @@
 // ==/UserScript==
 window.addEventListener("load", function() {
     var script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/gh/JonathanBeverley/KittensGame/ScriptKitties.js';
+    script.src='https://cdn.jsdelivr.net/gh/tmcauliffe123/KittensGame@main/ScriptKitties.js';
     script.id='SK_origin';
     document.body.appendChild(script);
 }, false);
